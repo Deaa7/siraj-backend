@@ -1,0 +1,38 @@
+<!-- templates/emails/email_verification.html -->
+{% extends "emails/base_email.html" %}
+{% load static %}
+
+{% block title %}تأكيد بريدك الإلكتروني - {{ site_name }}{% endblock %}
+
+{% block content %}
+<h2 style="color: #333; margin-top: 0;">مرحباً بك في {{ site_name }}! 👋</h2>
+
+<p>أهلاً وسهلاً {{ user_name }},</p>
+
+<p>شكراً لتسجيلك في تطبيقنا! لإكمال عملية التسجيل وتأكيد بريدك الإلكتروني، يرجى استخدام كلمة المرور لمرة واحدة (OTP) التالية:</p>
+
+<div class="otp-code">
+    {{ otp_code }}
+</div>
+
+<div class="expiry-note">
+    ⏰ ستنتهي صلاحية هذا الرمز خلال <strong>{{ otp_expiry }} دقيقة</strong>. 
+    يرجى استخدامه قبل انتهاء الصلاحية.
+</div>
+
+<p>أدخل هذا الرمز في صفحة التحقق لتفعيل حسابك والبدء في استخدام خدماتنا.</p>
+
+<p>إذا واجهتك أي مشكلة، يمكنك نسخ الرمز ولصقه مباشرة:</p>
+
+<p style="text-align: center;">
+    <code style="background: #f8f9fa; padding: 10px; border-radius: 4px; font-size: 16px; font-family: 'Courier New', monospace;">
+        {{ otp_code }}
+    </code>
+</p>
+
+<div class="support-info">
+    <p>هل تحتاج مساعدة؟ تواصل مع فريق الدعم على <a href="mailto:{{ support_email }}">{{ support_email }}</a></p>
+</div>
+
+<p>مع أطيب التحيات,<br>فريق {{ site_name }}</p>
+{% endblock %}

@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إشعار شحن الرصيد - سراج</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #00FFBF;
+            background-color: #05000F;
+            margin: 0;
+            padding: 20px;
+            direction: rtl;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #111827;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #1F2937;
+        }
+        .header {
+            background: #111827;
+            color: #00FFBF;
+            padding: 25px 20px;
+            text-align: center;
+            border-bottom: 2px solid #00FFBF;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 22px;
+            font-weight: 600;
+        }
+        .platform-name {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #00FFBF;
+            letter-spacing: 0.5px;
+        }
+        .content {
+            padding: 30px;
+            background: #111827;
+        }
+        .transaction-details {
+            background: #1F2937;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #00FFBF;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid #374151;
+        }
+        .detail-row:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        .label {
+            font-weight: 600;
+            color: #00FFBF;
+        }
+        .value {
+            color: #FFFFFF;
+            font-weight: 500;
+        }
+        .success-icon {
+            text-align: center;
+            font-size: 42px;
+            color: #00FFBF;
+            margin: 20px 0;
+        }
+        .footer {
+            background: #1F2937;
+            padding: 25px 20px;
+            text-align: center;
+            color: #00FFBF;
+            font-size: 14px;
+            border-top: 1px solid #374151;
+        }
+        .contact-info {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #374151;
+        }
+        .button {
+            display: inline-block;
+            background: #00FFBF;
+            color: #111827;
+            padding: 12px 35px;
+            text-decoration: none;
+            border-radius: 4px;
+            margin: 20px 0;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            font-size: 15px;
+        }
+        p {
+            color: #00FFBF;
+            margin: 15px 0;
+        }
+        .highlight {
+            color: #FFFFFF;
+            font-weight: 600;
+        }
+        .transaction-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #00FFBF;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .note {
+            background: #1F2937;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+            border-right: 3px solid #00FFBF;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="platform-name">سراج</div>
+            <h1>تم شحن الرصيد بنجاح</h1>
+        </div>
+        
+        <div class="content">
+            <div class="success-icon">✓</div>
+            
+            <p style="font-size: 16px; text-align: center; margin-bottom: 25px;">
+                <strong>السيد/السيدة <span class="highlight">{{ user_name }}</span>,</strong>
+            </p>
+            
+            <p style="text-align: center; margin-bottom: 25px;">
+                نود إخطاركم بأنه تم شحن رصيدكم في منصة <span class="highlight">"سراج"</span> بنجاح. الرصيد الجديد متاح للاستخدام الفوري.
+            </p>
+
+            <div class="transaction-title">تفاصيل المعاملة المالية</div>
+
+            <div class="transaction-details">
+                <div class="detail-row">
+                    <span class="label">المبلغ المودع:</span>
+                    <span class="value">{{ amount }} {{ currency }}</span>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="label">الرصيد الحالي:</span>
+                    <span class="value">{{ new_balance }} {{ currency }}</span>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="label">رقم المرجع:</span>
+                    <span class="value">#{{ transaction_id }}</span>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="label">تاريخ التنفيذ:</span>
+                    <span class="value">{{ transaction_date }}</span>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="label">وسيلة الدفع:</span>
+                    <span class="value">{{ payment_method }}</span>
+                </div>
+            </div>
+
+            <div class="note">
+                <p style="margin: 0; text-align: center; font-size: 14px;">
+                    تمت عملية الشحن بنجاح وتم تحديث رصيدكم بشكل فوري.
+                </p>
+            </div>
+
+            <div style="text-align: center; margin: 25px 0;">
+                <a href="{{ platform_url }}" class="button">الدخول إلى المنصة</a>
+            </div>
+
+            <p style="text-align: center; font-size: 14px; color: #9CA3AF;">
+                يمكنكم مراجعة كافة المعاملات من خلال لوحة التحكم في المنصة.
+            </p>
+        </div>
+        
+        <div class="footer">
+            <p style="margin: 0 0 15px 0;">مع فائق الاحترام والتقدير,</p>
+            <p style="margin: 0 0 20px 0; font-weight: 600;">فريق الدعم في <span class="highlight">سراج</span></p>
+            
+            <div class="contact-info">
+                <p style="margin: 5px 0;">للدعم الفني: <span class="highlight">{{ support_email }}</span></p>
+                <p style="margin: 5px 0;">هاتف الدعم: <span class="highlight">{{ support_phone }}</span></p>
+                <p style="margin: 15px 0 0 0; color: #9CA3AF; font-size: 13px;">© {{ current_year }} منصة سراج. جميع الحقوق محفوظة.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
