@@ -190,11 +190,11 @@ WSGI_APPLICATION = 'siraj.wsgi.application'
 DATABASES = {
     "default": {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.getenv('PRODUCTION_DB_NAME' , "default_value"),
-        'USER': os.getenv('PRODUCTION_DB_USER',"default_value"),
-        'PASSWORD':os.getenv('PRODUCTION_DB_PASSWORD',"default_value"),
-        'HOST':os.getenv('PRODUCTION_DB_HOST',"default_value"),
-        'PORT':int(os.getenv('PRODUCTION_DB_PORT',"3306")),
+        'NAME': os.getenv('DEVELOPMENT_DB_NAME' , "default_value"),
+        'USER': os.getenv('DEVELOPMENT_DB_USER',"default_value"),
+        'PASSWORD':os.getenv('DEVELOPMENT_DB_PASSWORD',"default_value"),
+        'HOST':os.getenv('DEVELOPMENT_DB_HOST',"default_value"),
+        'PORT':int(os.getenv('DEVELOPMENT_DB_PORT',"3306")),
  
     }
 }
@@ -272,9 +272,11 @@ STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 
 # Additional locations for static files
+# Only include if the directory exists
+static_dir = os.path.join(BASE_DIR, "static")
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, "static"),  # If you have a project-level static folder
-]
+    static_dir,
+] if os.path.exists(static_dir) else []
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

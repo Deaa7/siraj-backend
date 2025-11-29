@@ -14,7 +14,7 @@ urlpatterns = [
     path('get-exams-list-for-dashboard/', views.get_exams_list_for_dashboard, name='get_exams_list_for_dashboard'),
     path('get-average-results-for-all-exams-by-publisher-id/', views.get_average_results_for_all_exams_by_publisher_id, name='get_average_results_for_all_exams_by_teacher_id'),
     path('get-exam-details-for-dashboard/<str:exam_public_id>/', views.get_exam_details_for_dashboard, name='get_exam_details_for_dashboard'),
-    path('get-exam-preview-list-by-public-publisher-id/<str:exam_public_id>/', views.get_exam_preview_list_by_public_publisher_id, name='get_exam_preview_list_by_public_publisher_id'),
+    path('get-exam-preview-list/', views.get_exam_preview_list, name='get_exam_preview_list'),
     
     #students
     path('get-exam-details/<str:exam_public_id>/', views.get_exam_details, name='get_exam_details'),

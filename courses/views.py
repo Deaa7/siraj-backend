@@ -522,9 +522,10 @@ def get_course_and_lessons(request, course_public_id):
 
 @permission_classes([IsAuthenticated])
 @api_view(["GET"])
-def get_course_preview_list_by_public_publisher_id(request, public_publisher_id):
+def get_course_preview_list(request):
     try:
-        courses = Course.objects.select_related("publisher_id").filter(publisher_id__uuid=public_publisher_id)
+        user = request.user
+        courses = Course.objects.select_related("publisher_id").filter(publisher_id=user.id)
         serializer = CoursePreviewListSerializer(courses, many=True)
         return Response({"courses": serializer.data}, status=status.HTTP_200_OK)
     except Exception as e:

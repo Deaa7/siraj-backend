@@ -13,7 +13,7 @@ urlpatterns = [
     path('delete-note/<str:note_public_id>/', views.delete_note, name='delete_note'),
     path('get-notes-list-for-dashboard/', views.get_notes_list_for_dashboard, name='get_notes_list_for_dashboard'),
     path('get-note-details-for-dashboard/<str:note_public_id>/', views.get_note_details_for_dashboard, name='get_note_details_for_dashboard'),
-    path('get-note-preview-list-by-public-publisher-id/<str:public_publisher_id>/', views.get_note_preview_list_by_public_publisher_id, name='get_note_preview_list_by_public_publisher_id'),
+    path('get-note-preview-list/', views.get_note_preview_list, name='get_note_preview_list'),
 
  
     #student 

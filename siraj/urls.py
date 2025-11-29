@@ -51,7 +51,8 @@ urlpatterns = [
     path('api/transactions/', include('transactions.urls')),
     path('api/purchase-history/', include('purchaseHistory.urls')),
     path('api/withdraw-balance-request/', include('withdrawBalanceRequest.urls')),
-
+    path('api/discount-codes/', include('discountCodes.urls')),
+    
     #students
     path('api/student/', include('studentProfile.urls')),
     path('api/student-premium-content/', include('studentPremiumContent.urls')),

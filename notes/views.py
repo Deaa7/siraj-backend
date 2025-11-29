@@ -490,9 +490,10 @@ def get_note_content(request, note_public_id):
 
 @permission_classes([IsAuthenticated])
 @api_view(["GET"])
-def get_note_preview_list_by_public_publisher_id(request, public_publisher_id):
+def get_note_preview_list(request):
     try:
-        notes = Note.objects.select_related("publisher_id").filter(publisher_id__uuid=public_publisher_id)
+        user = request.user
+        notes = Note.objects.select_related("publisher_id").filter(publisher_id=user.id)
         serializer = NotePreviewListSerializer(notes, many=True)
         return Response({"notes": serializer.data}, status=status.HTTP_200_OK)
     except Exception as e:

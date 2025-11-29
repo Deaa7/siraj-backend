@@ -493,15 +493,15 @@ def publisher_most_profitable_content_preview(request):
         limit = 5
 
         exams_queryset = (
-            Exam.objects.filter(publisher=publisher, active=True)
+            Exam.objects.filter(publisher_id=publisher, active=True)
             .values("public_id", "name", "profit_amount", "subject_name", "Class")
         )
         courses_queryset = (
-            Course.objects.filter(publisher=publisher, active=True)
+            Course.objects.filter(publisher_id=publisher, active=True)
             .values("public_id", "name", "profit_amount", "subject_name", "Class")
         )
         notes_queryset = (
-            Note.objects.filter(publisher=publisher, active=True)
+            Note.objects.filter(publisher_id=publisher, active=True)
             .values("public_id", "name", "profit_amount", "subject_name", "Class")
         )
         

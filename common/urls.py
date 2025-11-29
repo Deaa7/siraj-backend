@@ -24,5 +24,5 @@ urlpatterns = [
     path('platform-statistics/', views.platform_statistics, name='platform-statistics'),
     path('publisher-statistics/', views.publisher_statistics, name='publisher-statistics'),
 
- path('create-presigned-url/', views.PresignedURLView.as_view(), name='create-presigned-url'),
+     path('create-presigned-url/', views.PresignedURLView.as_view(), name='create-presigned-url'),
 ]

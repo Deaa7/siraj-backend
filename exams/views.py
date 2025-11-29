@@ -554,10 +554,12 @@ def get_exam_and_mcqs(request, exam_public_id):
 
 @permission_classes([IsAuthenticated])
 @api_view(["GET"])
-def get_exam_preview_list_by_public_publisher_id(request, public_publisher_id):
+def get_exam_preview_list(request):
     try:
+        user = request.user 
+        publisher = get_object_or_404(User, id=user.id);
         exams = Exam.objects.select_related("publisher_id").filter(
-            publisher_id__uuid=public_publisher_id
+            publisher_id=publisher.id
         )
         serializer = ExamPreviewListSerializer(exams, many=True)
         return Response({"exams": serializer.data}, status=status.HTTP_200_OK)

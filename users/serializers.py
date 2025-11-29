@@ -180,10 +180,12 @@ class TeacherRegistrationSerializer(serializers.ModelSerializer):
         profile_data = validated_data.pop("profile")
 
         bio = ""
+        studying_subject = profile_data["studying_subjects"]
+        class_level = profile_data["Class"]
         if validated_data.get("gender") == "M":
-            bio = f"استاذ متخصص في مادة {SUBJECT_NAMES_DICT[profile_data["studying_subjects"]]} للصف {CLASSES_DICT[profile_data["Class"]]}"
+            bio = f"استاذ متخصص في مادة {SUBJECT_NAMES_DICT[studying_subject]} للصف {CLASSES_DICT[class_level]}"
         else:
-            bio = f"آنسة متخصصة في مادة {SUBJECT_NAMES_DICT[profile_data["studying_subjects"]]} للصف {CLASSES_DICT[profile_data["Class"]]}"
+            bio = f"آنسة متخصصة في مادة {SUBJECT_NAMES_DICT[studying_subject]} للصف {CLASSES_DICT[class_level]}"
 
         profile_data["bio"] = bio
         password = validated_data.pop("password")

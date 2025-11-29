@@ -150,7 +150,6 @@ class DiscountCodeDetailSerializer(serializers.ModelSerializer):
 
 
 class DiscountCodeListSerializer(serializers.ModelSerializer):
-    publisher_public_id = serializers.CharField(source="publisher_id.uuid")
     public_content_id = serializers.SerializerMethodField("get_public_content_id")
     content_name = serializers.SerializerMethodField("get_content_name")
     content_class = serializers.SerializerMethodField("get_content_class")
@@ -163,6 +162,9 @@ class DiscountCodeListSerializer(serializers.ModelSerializer):
             "discount_for",
             "public_content_id",
             "content_name",
+            "content_class",
+            "content_subject_name",
+            "content_price",
             "discount_type",
             "discount_value",
             "valid_until",

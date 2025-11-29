@@ -159,24 +159,25 @@ def get_discount_codes_list(request):
     try:
         publisher_id = request.user.id
         
-        limit, count = validate_pagination_parameters(request.data.get("count", 0), request.data.get("limit", 10))
+        count, limit = validate_pagination_parameters(request.query_params.get("count", 0), request.query_params.get("limit", 10))
         
-        discount_codes = DiscountCodes.objects.select_related("exam_id", "note_id", "course_id").filter(publisher_id=publisher_id)
+        discount_codes = DiscountCodes.objects.select_related("exam_id", "note_id", "course_id").filter(publisher_id=publisher_id).order_by("-created_at")
         
  
+        total = discount_codes.count()
         begin = count * limit
-        if begin > discount_codes.count():
-            begin = discount_codes.count()
+        if begin > total:
+            begin = total
         end = (count + 1) * limit
-        if end > discount_codes.count():
-            end = discount_codes.count()
+        if end > total:
+            end = total
         
         serializer = DiscountCodeListSerializer(discount_codes[begin:end], many=True)
         
         return Response(
             {
                 "discount_codes": serializer.data,
-                "total_number": discount_codes.count()
+                "total_number": total
             },
             status=status.HTTP_200_OK,
         )

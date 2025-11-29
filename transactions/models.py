@@ -5,11 +5,12 @@ from common.models import PublicModel
 class Transactions(PublicModel):
     
     TRANSACTION_TYPE_CHOICES = [
-        ("withdraw", "withdraw"),
-        ("purchase", "purchase"),
-        ("charge", "charge"),
-        ("bonus", "bonus"),
-        ("penalty", "penalty"),
+        ("withdraw", "withdraw"), # -
+        ("purchase", "purchase"), # +
+        ("subscription", "subscription"), # -
+        ("charge", "charge"), # +
+        ("bonus", "bonus"), # +
+        ("penalty", "penalty"), # -
     ]
     
     TRANSACTION_STATUS_CHOICES = [

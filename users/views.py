@@ -230,13 +230,40 @@ def login(request):
             teacherData = TeacherProfile.objects.select_related("user").get(user=user)
             profile_data = OwnTeacherProfileSerializer(teacherData).data
 
-        
+        verified = False 
+        if user.account_type == "teacher":
+                verified = teacherData.verified
+        elif user.account_type == "team":
+                verified = teamData.verified
+        studying_subjects = None
+        if user.account_type == "teacher":  
+            studying_subjects = teacherData.studying_subjects
+        Class = None
+        if user.account_type == "teacher":
+            Class = teacherData.Class
          # Create response
         response = Response(
                 {
                     'message': 'تم تسجيل الدخول بنجاح',
                     'access_token': str(refresh.access_token),
-                    'user': profile_data,
+                    'user': {
+                        "publicId": user.uuid,
+                        "firstName": user.first_name,
+                        "lastName": user.last_name,
+                        "fullName": user.full_name,
+                        "email": user.email,
+                        "phone": user.phone,
+                        "city": user.city,
+                        "gender": user.gender,
+                        "image": user.image,
+                        "isBanned": user.is_banned,
+                        "verified": verified,
+                        "isAccountConfirmed": user.is_account_confirmed,
+                        "accountType": user.account_type,
+                        "balance": user.balance,
+                        "Class": Class,
+                        "studyingSubject": studying_subjects,
+                    },
                 },
                 status=status.HTTP_200_OK
             )
@@ -305,17 +332,45 @@ def publisher_login(request):
  
         if user.account_type == "team":
             teamData = TeamProfile.objects.select_related("user").get(user=user)
-            profile_data = OwnTeamProfileSerializer(teamData).data
         elif user.account_type == "teacher":
             teacherData = TeacherProfile.objects.select_related("user").get(user=user)
-            profile_data = OwnTeacherProfileSerializer(teacherData).data
-           
+            
+        studying_subjects = None
+        if user.account_type == "teacher":  
+            studying_subjects = teacherData.studying_subjects
+        Class = None
+        if user.account_type == "teacher":
+            Class = teacherData.Class
             # Create response
+            
+            verified = False 
+            if user.account_type == "teacher":
+                verified = teacherData.verified
+            elif user.account_type == "team":
+                verified = teamData.verified
+                
         response = Response(
                 {
                     'message': 'تم تسجيل الدخول بنجاح',
                     'access_token': str(refresh.access_token),
-                    'user': profile_data,
+                    'user': {
+                        "publicId": user.uuid,
+                        "firstName": user.first_name,
+                        "lastName": user.last_name,
+                        "fullName": user.full_name,
+                        "email": user.email,
+                        "phone": user.phone,
+                        "city": user.city,
+                        "gender": user.gender,
+                        "image": user.image,
+                        "isBanned": user.is_banned,
+                        "verified": verified,
+                        "isAccountConfirmed": user.is_account_confirmed,
+                        "accountType": user.account_type,
+                        "balance": user.balance,
+                        "Class": Class,
+                        "studyingSubject": studying_subjects,
+                    },
                 },
                 status=status.HTTP_200_OK
             )
@@ -481,10 +536,39 @@ def refresh_token(request):
             teacherData = TeacherProfile.objects.select_related("user").get(user=user)
             profile_data = OwnTeacherProfileSerializer(teacherData).data
 
+        verified = False 
+        if user.account_type == "teacher":
+            verified = teacherData.verified
+        elif user.account_type == "team":
+            verified = teamData.verified
+            
+        studying_subjects = None
+        if user.account_type == "teacher":  
+            studying_subjects = teacherData.studying_subjects
+        Class = None
+        if user.account_type == "teacher":
+            Class = teacherData.Class
         response_data = {
             "message": "تم تحديث رمز الوصول بنجاح",
-            "user": profile_data,
             "access_token": str(new_access_token),
+                   'user': {
+                        "publicId": user.uuid,
+                        "firstName": user.first_name,
+                        "lastName": user.last_name,
+                        "fullName": user.full_name,
+                        "email": user.email,
+                        "phone": user.phone,
+                        "city": user.city,
+                        "gender": user.gender,
+                        "image": user.image,
+                        "isBanned": user.is_banned,
+                        "verified": verified,
+                        "isAccountConfirmed": user.is_account_confirmed,
+                        "accountType": user.account_type,
+                        "balance": user.balance,
+                        "Class": Class,
+                        "studyingSubject": studying_subjects,
+                    },
         }
         response_object = Response(response_data, status=status.HTTP_200_OK)
         response_object.set_cookie(

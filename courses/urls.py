@@ -12,7 +12,7 @@ urlpatterns = [
     path('delete-course/<str:course_public_id>/', views.delete_course, name='delete_course'),
     path('get-course-details-for-dashboard/<str:course_public_id>/', views.get_course_details_for_dashboard, name='get_course_details_for_dashboard'),
     path('get-courses-list-for-dashboard/', views.get_courses_list_for_dashboard, name='get_courses_list_for_dashboard'),
-    path('get-course-preview-list-by-public-publisher-id/<str:public_publisher_id>/', views.get_course_preview_list_by_public_publisher_id, name='get_course_preview_list_by_public_publisher_id'),
+        path('get-course-preview-list/', views.get_course_preview_list, name='get_course_preview_list'),
    
     #students
     path('get-course-details/<str:course_public_id>/', views.get_course_details, name='get_course_details'),

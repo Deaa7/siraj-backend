@@ -17,7 +17,10 @@ class PublicModel(models.Model):
    
     class Meta:
         abstract = True
-        ordering = ['-created_at']
+        ordering = ['-created_at']  # ← This does the magic!
+        indexes = [
+            models.Index(fields=['-created_at']),  # ← This makes it fast
+        ]
         
     def save(self, *args, **kwargs):
         if not self.public_id:
