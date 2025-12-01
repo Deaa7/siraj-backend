@@ -18,5 +18,10 @@ urlpatterns = [
         views.reject_verification_request,
         name="reject_verification_request",
     ),
+    path(
+        "create-publisher-verification-request/",
+        views.create_publisher_verification_request,
+        name="create_publisher_verification_request",
+    ),
 ]
 

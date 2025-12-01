@@ -51,6 +51,7 @@ class CommentDetailSerializer(serializers.ModelSerializer):
             "user_image",
             "content_type",
             "content_public_id",
+            "user_gender",
         ]
 
     def get_user_name(self, obj: Comment):

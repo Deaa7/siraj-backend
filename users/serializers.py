@@ -9,12 +9,13 @@ from publisherOffers.models import PublisherOffers
 
 
 from studentSubjectTracking.models import StudentSubjectTracking
-from Constants import GENDERS, CITIES
 from Constants import (
     SUBJECT_NAMES_ARRAY,
     CLASSES_ARRAY,
     SUBJECT_NAMES_DICT,
     CLASSES_DICT,
+    CITIES_ARRAY,
+    GENDERS_ARRAY
 )
 
 # Import global security utilities
@@ -22,10 +23,10 @@ from utils.security import SecurityValidator
 from utils.validators import CommonValidators
 from publisherPlans.models import PublisherPlans
 from django.utils import timezone
-from datetime import timedelta
 
 
-# this is helper serializer for updating teacher/student profile , used as refrence for the user fields
+
+# this is helper serializer for updating teacher/student profile , used as reference for the user fields
 class UserUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -40,43 +41,44 @@ class UserUpdateSerializer(serializers.ModelSerializer):
 
     def validate_first_name(self, value):
         """Validate first name"""
-        if value is None:
-            return value
+    
+        if not value:
+            raise serializers.ValidationError("الاسم الأول مطلوب")
         return CommonValidators.validate_arabic_text(value, "الاسم الأول")
 
     def validate_last_name(self, value):
         """Validate last name"""
-        if value is None:
+        if not value:
             return value
         return CommonValidators.validate_arabic_text(value, "الاسم الأخير")
 
     def validate_gender(self, value):
         """Validate gender"""
-        if value is None:
+        if not value:
             return value
-        if value not in GENDERS:
+        if value not in GENDERS_ARRAY:
             raise serializers.ValidationError("الجنس يجب أن يكون من القائمة")
         return value
 
     def validate_city(self, value):
         """Validate city"""
-        if value is None:
-            return value
-        if value not in CITIES:
+        if not value:
+         raise serializers.ValidationError("المدينة مطلوبة")
+        if value not in CITIES_ARRAY:
             raise serializers.ValidationError("المدينة يجب أن يكون من القائمة")
         return value
 
     def validate_phone(self, value):
         """Validate phone with global security protection"""
         if not value:
-            return value
+              raise serializers.ValidationError("رقم الهاتف مطلوب")
         try:
             return SecurityValidator.validate_input(
                 value, "الهاتف", check_sql_injection=True, check_xss=False
             )
         except ValidationError as e:
             raise serializers.ValidationError(str(e))
-
+    
 
 ######################################
 

@@ -1,4 +1,4 @@
-def validate_pagination_parameters(count, limit):
+def validate_pagination_parameters(count: int, limit: int) -> tuple[int, int]:
     """
     Validate pagination parameters.
 

@@ -2,18 +2,18 @@ from rest_framework import serializers
 from .models import TeacherProfile
 from utils.security import SecurityValidator
 from django.core.exceptions import ValidationError
-from Constants import CLASSES, SUBJECT_NAMES
+from Constants import CLASSES_ARRAY, SUBJECT_NAMES_ARRAY
 from users.serializers import UserUpdateSerializer
-from users.models import User
 
 
 class TeacherProfileUpdateSerializer(serializers.Serializer):
     """Serializer for updating teacher profile information"""
 
-    user = UserUpdateSerializer()
+    # user = UserUpdateSerializer(data=, partial=True)
+    
     # Teacher Profile fields
-    Class = serializers.CharField(max_length=100, required=False)
-    studying_subjects = serializers.CharField(max_length=100, required=False)
+    Class = serializers.CharField(max_length=100 )
+    studying_subjects = serializers.CharField(max_length=100 )
     university = serializers.CharField(max_length=100, required=False)
     address = serializers.CharField(max_length=500, required=False, allow_blank=True)
     bio = serializers.CharField(max_length=1000, required=False, allow_blank=True)
@@ -51,14 +51,40 @@ class TeacherProfileUpdateSerializer(serializers.Serializer):
             user_serializer.is_valid(raise_exception=True)
             user_serializer.save()
 
-        # Update Profile model
-        return super().update(instance, validated_data)
+        # Update Profile model fields
+        if "Class" in validated_data:
+            instance.Class = validated_data.get("Class", instance.Class)
+        if "studying_subjects" in validated_data:
+            instance.studying_subjects = validated_data.get("studying_subjects", instance.studying_subjects)
+        if "university" in validated_data:
+            instance.university = validated_data.get("university", instance.university)
+        if "address" in validated_data:
+            instance.address = validated_data.get("address", instance.address)
+        if "bio" in validated_data:
+            instance.bio = validated_data.get("bio", instance.bio)
+        if "years_of_experience" in validated_data:
+            instance.years_of_experience = validated_data.get("years_of_experience", instance.years_of_experience)
+        if "telegram_link" in validated_data:
+            instance.telegram_link = validated_data.get("telegram_link", instance.telegram_link)
+        if "whatsapp_link" in validated_data:
+            instance.whatsapp_link = validated_data.get("whatsapp_link", instance.whatsapp_link)
+        if "instagram_link" in validated_data:
+            instance.instagram_link = validated_data.get("instagram_link", instance.instagram_link)
+        if "facebook_link" in validated_data:
+            instance.facebook_link = validated_data.get("facebook_link", instance.facebook_link)
+        if "x_link" in validated_data:
+            instance.x_link = validated_data.get("x_link", instance.x_link)
+        if "linkedin_link" in validated_data:
+            instance.linkedin_link = validated_data.get("linkedin_link", instance.linkedin_link)
+        
+        instance.save()
+        return instance
 
     def validate_Class(self, value):
         """Validate Class field with global security protection"""
         if not value:
             return value
-        if value not in CLASSES:
+        if value not in CLASSES_ARRAY:
             raise serializers.ValidationError("الصف يجب أن يكون من القائمة")
         return value
 
@@ -66,7 +92,7 @@ class TeacherProfileUpdateSerializer(serializers.Serializer):
         """Validate studying subjects with global security protection"""
         if not value:
             return value
-        if value not in SUBJECT_NAMES:
+        if value not in SUBJECT_NAMES_ARRAY:
             raise serializers.ValidationError("المواد الدراسية يجب أن يكون من القائمة")
         return value
 
@@ -237,8 +263,10 @@ class PublicTeacherProfileSerializer(serializers.ModelSerializer):
 class OwnTeacherProfileSerializer(serializers.ModelSerializer):
     """Serializer for own teacher profile response"""
 
-    full_name = serializers.CharField(max_length=300, source="user.full_name")
     first_name = serializers.CharField(max_length=100, source="user.first_name")
+    last_name = serializers.CharField(max_length=100, source="user.last_name")
+    full_name = serializers.CharField(max_length=300, source="user.full_name")
+    phone = serializers.CharField(max_length=30, source="user.phone")
     city = serializers.CharField(max_length=60, source="user.city")
     gender = serializers.CharField(max_length=100, source="user.gender")
     image = serializers.CharField(max_length=300, source="user.image")
@@ -252,10 +280,12 @@ class OwnTeacherProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = TeacherProfile
         fields = [
-            "full_name",
             "first_name",
+            "last_name",
+            "full_name",
             "city",
             "gender",
+            "phone",
             "image",
             "created_at",
             "balance",

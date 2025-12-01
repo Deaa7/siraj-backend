@@ -457,7 +457,7 @@ def delete_note(request, note_public_id):
 @api_view(["GET"])
 def get_note_details_for_dashboard(request, note_public_id):
     try:
-        publisher_id = request.user.id
+        publisher_id = request.user
         note = Note.objects.select_related("publisher_id").get(public_id=note_public_id)
 
         if publisher_id != note.publisher_id:

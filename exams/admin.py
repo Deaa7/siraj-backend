@@ -42,13 +42,12 @@ class ExamAdmin(admin.ModelAdmin):
     # Fields that can be searched
     search_fields = [
         'name',
-        'publisher_id',
+        'publisher_id__username',
+        'publisher_id__email',
         'units',
         'Class',
         'subject_name',
-        'price',
-        'created_at',
-        'updated_at',
+        'public_id',
     ]
     
     # Fields that can be filtered

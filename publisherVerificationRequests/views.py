@@ -9,6 +9,7 @@ from notifications.models import Notifications
 from services.parameters_validator import validate_pagination_parameters
 
 from .models import PublisherVerificationRequests
+from users.models import User
 from .serializers import CreatePublisherVerificationRequestSerializer, PublisherVerificationRequestSerializer
 
 
@@ -23,18 +24,13 @@ def get_publisher_verification_requests(request):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        limit, count = validate_pagination_parameters(
-            request.query_params.get("limit", 7),
+        count, limit = validate_pagination_parameters(
             request.query_params.get("count", 0),
+            request.query_params.get("limit", 7),
         )
 
-        if limit <= 0:
-            limit = 7
-        if count < 0:
-            count = 0
-
         verification_requests_qs = (
-            PublisherVerificationRequests.objects.filter(status="pending")
+            PublisherVerificationRequests.objects.filter(status="pending").order_by("-created_at")
 
         )
 
@@ -71,24 +67,50 @@ def create_publisher_verification_request(request):
    
     try:
         user = request.user
+        user = get_object_or_404(User, id=user.id)
+        
         if user.account_type != "teacher" and user.account_type != "team":
             return Response(
                 {"error": "ليس لديك صلاحية لإنشاء طلب توثيق "},
                 status=status.HTTP_403_FORBIDDEN,
             )
+        
+        if not request.FILES.get("image1") or not request.FILES.get("image2"):
+            return Response(
+                {"error": "يجب إرفاق صورة الهوية لتوثيق الحساب"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        previous_verification_request = PublisherVerificationRequests.objects.filter(publisher_id=user, status="pending").first()
+       
+        if previous_verification_request:
+            return Response(
+                {"error": "لديك طلب توثيق سابق ينتظر الموافقة"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+            
+        previous_verification_request = PublisherVerificationRequests.objects.filter(publisher_id=user, status="approved").first()
+        
+        if previous_verification_request:
+            return Response(
+                {"error": "تم توثيق الحساب مسبقاً"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
             
         serializer = CreatePublisherVerificationRequestSerializer(data=request.data)
         
         if serializer.is_valid():
-    
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            image1 = serializer.validated_data.get("image1")
+            image2 = serializer.validated_data.get("image2")
+            PublisherVerificationRequests.objects.create(
+                publisher_id=user,
+                image1=image1,
+                image2=image2,
+            )
+            return Response({"message": "تم إرسال طلب التوثيق بنجاح"}, status=status.HTTP_201_CREATED)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
     except Exception as exc:
         return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
-
 
 @api_view(["PATCH"])
 @permission_classes([IsAuthenticated])

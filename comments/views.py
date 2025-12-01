@@ -18,7 +18,7 @@ from courses.models import Course
 from posts.models import Post
 from notifications.tasks import publishing_comment_notification
 from django.shortcuts import get_object_or_404
-
+from services.parameters_validator import validate_pagination_parameters
 
 
 
@@ -45,7 +45,7 @@ def create_comment(request):
       contentObj = get_object_or_404(Exam, public_id = content_public_id)
       contentObj.number_of_comments += 1
       contentObj.save()
-      commnet = Comment.objects.create(user_id = user, comment_text = comment_text, exam_id = contentObj)
+      comment = Comment.objects.create(user_id = user, comment_text = comment_text, exam_id = contentObj)
       
     elif content_type == "note" :
       
@@ -70,12 +70,12 @@ def create_comment(request):
       comment = Comment.objects.create(user_id = user, comment_text = comment_text, post_id = contentObj)
       
     
-    elif content_type == "comment":
+    # elif content_type == "comment":
       
-        contentObj = get_object_or_404(Comment, public_id = content_public_id)
-        contentObj.number_of_replies += 1
-        contentObj.save()
-        comment = Comment.objects.create(user_id = user, comment_text = comment_text, comment_id = contentObj)
+    #     contentObj = get_object_or_404(Comment, public_id = content_public_id)
+    #     contentObj.number_of_replies += 1
+    #     contentObj.save()
+    #     comment = Comment.objects.create(user_id = user, comment_text = comment_text, comment_id = contentObj)
       
     else:
         return Response(
@@ -84,7 +84,7 @@ def create_comment(request):
         )
         
  
-    publishing_comment_notification.delay(comment.id, user , content_type, content_public_id , contentObj.name)
+    # publishing_comment_notification.delay(comment.id, user , content_type, content_public_id , contentObj.name)
 
     return Response(comment.public_id, status=status.HTTP_201_CREATED)
 
@@ -157,9 +157,9 @@ def get_content_comments(request, content_public_id):
     """
     Retrieve comments list for a given content_type and content_public_id.
     """
-    content_type = request.data.get("content_type")
+    content_type = request.query_params.get("content_type")
  
-    limit, count = validate_pagination_parameters(request.data.get("count", 0), request.data.get("limit", 7))
+    count, limit = validate_pagination_parameters(request.query_params.get("count", 0), request.query_params.get("limit", 7))
  
     comments = None
     contentObj = None
@@ -173,19 +173,19 @@ def get_content_comments(request, content_public_id):
     
     if content_type == "exam":
       contentObj = get_object_or_404(Exam, public_id = content_public_id)
-      comments = Comment.objects.filter(exam_id = contentObj)
+      comments = Comment.objects.filter(exam_id = contentObj).order_by("-created_at")
     elif content_type == "note":
       contentObj = get_object_or_404(Note, public_id = content_public_id)
-      comments = Comment.objects.filter(note_id = contentObj)
+      comments = Comment.objects.filter(note_id = contentObj).order_by("-created_at")
     elif content_type == "course":
       contentObj = get_object_or_404(Course, public_id = content_public_id)
-      comments = Comment.objects.filter(course_id = contentObj)
+      comments = Comment.objects.filter(course_id = contentObj).order_by("-created_at")
     elif content_type == "post":
       contentObj = get_object_or_404(Post, public_id = content_public_id)
-      comments = Comment.objects.filter(post_id = contentObj)
+      comments = Comment.objects.filter(post_id = contentObj).order_by("-created_at")
     elif content_type == "comment":
       contentObj = get_object_or_404(Comment, public_id = content_public_id)
-      comments = Comment.objects.filter(comment_id = contentObj)
+      comments = Comment.objects.filter(comment_id = contentObj).order_by("-created_at")
     else:
       return Response(
         {"error": "نوع المحتوى غير معروف"},
@@ -195,11 +195,49 @@ def get_content_comments(request, content_public_id):
     begin = count * limit
     end = (count + 1) * limit
    
-    if end > comments.count():
-      end = comments.count()
+    total_number = comments.count()
+    if begin > total_number:
+      begin = total_number
+    if end > total_number:
+      end = total_number
    
     comments = comments[begin:end]
 
     serializer = CommentListSerializer(comments, many=True)
     
-    return Response({"comments": serializer.data, "total_number": comments.count()}, status=status.HTTP_200_OK)
+    return Response({"comments": serializer.data, "total_number": total_number}, status=status.HTTP_200_OK)
+
+
+@permission_classes([IsAuthenticated])
+@api_view(["GET"])
+def get_content_comments_number(request, content_public_id):
+    """
+    Retrieve number of comments for a given content_type and content_public_id.
+    """
+    content_type = request.query_params.get("content_type")
+    comment_number = 0
+    if content_type not in ["exam", "note", "course", "post", "comment"]:
+        return Response(
+            {"error": "نوع المحتوى غير صحيح"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    if content_type == "exam":
+      contentObj = get_object_or_404(Exam, public_id = content_public_id)
+      comment_number = Comment.objects.filter(exam_id = contentObj).count()
+    elif content_type == "note":
+      contentObj = get_object_or_404(Note, public_id = content_public_id)
+      comment_number = Comment.objects.filter(note_id = contentObj).count()
+    elif content_type == "course":
+      contentObj = get_object_or_404(Course, public_id = content_public_id)
+      comment_number = Comment.objects.filter(course_id = contentObj).count()
+    elif content_type == "post":
+      contentObj = get_object_or_404(Post, public_id = content_public_id)
+      comment_number = Comment.objects.filter(post_id = contentObj).count()
+    # elif content_type == "comment":
+    #   contentObj = get_object_or_404(Comment, public_id = content_public_id)
+    else:
+      return Response(
+        {"error": "نوع المحتوى غير معروف"},
+        status=status.HTTP_400_BAD_REQUEST,
+      )
+    return Response({"number_of_comments": comment_number}, status=status.HTTP_200_OK)

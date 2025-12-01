@@ -216,6 +216,7 @@ class ExamDetailsForDashboardSerializer(serializers.ModelSerializer):
             "units",
             "publisher_public_id",
             "publisher_name",
+            "visibility",
             "created_at",
             "updated_at",
         ]

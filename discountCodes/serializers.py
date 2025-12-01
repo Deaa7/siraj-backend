@@ -158,6 +158,7 @@ class DiscountCodeListSerializer(serializers.ModelSerializer):
     class Meta:
         model = DiscountCodes
         fields = [
+            "public_id",
             "discount_code",
             "discount_for",
             "public_content_id",

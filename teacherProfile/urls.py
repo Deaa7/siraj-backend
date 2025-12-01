@@ -9,6 +9,6 @@ urlpatterns = [
     path('change-number-of-followers/', views.change_number_of_followers, name='change-number-of-followers'),
     path('update-profile/', views.update_teacher_profile, name='update-teacher-profile'),
     path('public-profile/<str:teacher_uuid>/', views.public_teacher_profile.as_view(), name='public-teacher-profile'),
-    path('own-profile/', views.own_teacher_profile, name='own-teacher-profile'),
+    path('own-teacher-profile/', views.own_teacher_profile, name='own-teacher-profile'),
     path('get-teacher-preview-cards/', views.get_teacher_preview_cards, name='get-teacher-preview-cards'),
 ]

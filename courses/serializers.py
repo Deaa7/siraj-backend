@@ -268,10 +268,17 @@ class CourseDetailsForDashboardSerializer(serializers.ModelSerializer):
             "number_of_enrollments",
             "number_of_completions",
             "number_of_purchases",
+            "number_of_lessons",
+            "number_of_comments",
             "profit_amount",
             "level",
             "active",
-            "estimated_time"
+            "what_you_will_learn",
+            "description",
+            "estimated_time",
+            "created_at",
+            "updated_at",
+            "course_image",
         ]
         
         

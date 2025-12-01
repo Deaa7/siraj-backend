@@ -6,6 +6,9 @@ from rest_framework.views import APIView
 
 from teamProfile.serializers import TeamPreviewSerializer
 from .models import TeacherProfile
+from users.models import User
+from users.serializers import UserUpdateSerializer
+
 from .serializers import (
     TeacherPreviewSerializer,
     TeacherProfileUpdateSerializer,
@@ -18,7 +21,7 @@ from rest_framework.decorators import permission_classes
 from django.db.models import Q
 from teamProfile.models import TeamProfile
 
- 
+
 # Create your views here.
 
 
@@ -116,16 +119,24 @@ def update_teacher_profile(request):
     }
     """
     user = request.user
+    user = User.objects.get(id = user.id)
     profile = TeacherProfile.objects.get(user=user)
     
     serializer = TeacherProfileUpdateSerializer(profile, data=request.data , partial=True)
-
+    user_serializer = UserUpdateSerializer(user , data=request.data["user"] , partial=True )
+    
     if not serializer.is_valid():
         return Response(
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
         )
-
+        
+    if not user_serializer.is_valid():
+        return Response(
+            {"errors": user_serializer.errors}, status=status.HTTP_400_BAD_REQUEST
+        )
+ 
     serializer.save()
+    user_serializer.save()
       
     return Response(
             {"message": "تم تحديث الملف الشخصي بنجاح"},
@@ -233,14 +244,14 @@ class public_teacher_profile(APIView):
         )
 
 
-@permission_classes([IsAuthenticated])
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def own_teacher_profile(request):
     """
     Get a own teacher profile
     """
     try:
-        teacher = TeacherProfile.objects.select_related("user").get(id=request.user.id)
+        teacher = TeacherProfile.objects.select_related("user").get(user=request.user)
         serializer = OwnTeacherProfileSerializer(teacher)
         return Response(serializer.data, status=200)
     except TeacherProfile.DoesNotExist:

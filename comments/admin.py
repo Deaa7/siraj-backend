@@ -7,15 +7,15 @@ class CommentAdmin(admin.ModelAdmin):
     
     def full_name(self, obj):
         name = ""
-        if obj.user.account_category == "teacher":
-            name = "الاستاذ " if obj.user.gender == "M" else "الآنسة " 
-            name += obj.user.full_name
-        elif obj.user.account_category == "team":
-            name = "فريق " + obj.user.team_name
+        if obj.user_id.account_type == "teacher":
+            name = "الاستاذ " if obj.user_id.gender == "M" else "الآنسة " 
+            name += obj.user_id.full_name
+        elif obj.user_id.account_type == "team":
+            name = "فريق " + obj.user_id.team_name
         else:
-            name = obj.user.full_name
+            name = obj.user_id.full_name
         name = name.strip()
         return name
     
     def is_publisher(self, obj):
-        return obj.user.account_category == "teacher" or obj.user.account_category == "team"
+        return obj.user_id.account_type == "teacher" or obj.user_id.account_type == "team"

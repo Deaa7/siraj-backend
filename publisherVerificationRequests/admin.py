@@ -9,9 +9,9 @@ from .models import PublisherVerificationRequests
 class PublisherVerificationRequestsAdmin(admin.ModelAdmin):
     list_display = [
         "publisher_id",
-        "name",
-        "phone",
-        "email",
+        # "name",
+        # "phone",
+        # "email",
         "status",
         "processed_at",
         "created_at",

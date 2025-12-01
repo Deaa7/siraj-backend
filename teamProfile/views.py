@@ -3,8 +3,11 @@ from teamProfile.serializers import (
     OwnTeamProfileSerializer,
     PublicTeamProfileSerializer,
     TeamProfileUpdateSerializer,
+    TeamUserUpdateSerializer,
 )
 from .models import TeamProfile
+from users.models import User
+
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.response import Response
 from rest_framework import status
@@ -103,16 +106,25 @@ def update_team_profile(request):
     }
     """
     user = request.user
+    user = User.objects.get(id = user.id)
     profile = TeamProfile.objects.get(user=user)
     
     serializer = TeamProfileUpdateSerializer(profile, data=request.data)
-    # user_id = request.data.get("user_id")
+    user_serializer = TeamUserUpdateSerializer(user , data=request.data["user"] , partial=True )
+    
     if not serializer.is_valid():
         return Response(
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
         )
+        
+    if not user_serializer.is_valid():
+        return Response(
+            {"errors": user_serializer.errors}, status=status.HTTP_400_BAD_REQUEST
+        )
 
     serializer.save()
+    user_serializer.save()
+    
     return Response(
         {"message": "تم تحديث الملف الشخصي بنجاح"},
         status=status.HTTP_200_OK,
@@ -159,5 +171,5 @@ def own_team_profile(request):
         return Response(serializer.data, status=200)
     except TeamProfile.DoesNotExist:
         return Response(
-            {"error": "ملف المعلم غير موجود"}, status=status.HTTP_404_NOT_FOUND
+            {"error": "ملف الفريق غير موجود"}, status=status.HTTP_404_NOT_FOUND
         )

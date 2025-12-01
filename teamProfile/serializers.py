@@ -6,57 +6,60 @@ from django.core.exceptions import ValidationError
 # from users.serializers import UserUpdateSerializer
 from users.models import User
 from utils.validators import CommonValidators
-from Constants import  CITIES
+from Constants import  CITIES_ARRAY
 class TeamUserUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
             "first_name",
             "last_name",
-            "email",
             "city",
             "image",
             "phone",
             "team_name",
         ]
+        extra_kwargs = {
+            'phone': {'validators': []}  # Disable default unique validator
+        }
         
-    def validate_team_name(self, value):
-        """Validate team name"""
-        if value is None:
-            return value
-        return CommonValidators.validate_text_field(value, "اسم الفريق")
-    
     def validate_first_name(self, value):
         """Validate first name"""
-        if value is None:
-            return value
+    
+        if not value:
+            raise serializers.ValidationError("الاسم الأول مطلوب")
         return CommonValidators.validate_arabic_text(value, "الاسم الأول")
 
     def validate_last_name(self, value):
         """Validate last name"""
-        if value is None:
+        if not value:
             return value
         return CommonValidators.validate_arabic_text(value, "الاسم الأخير")
 
+    def validate_team_name(self, value):
+        """Validate team name"""
+    
+        if not value:
+            raise serializers.ValidationError("اسم الفريق مطلوب")
+        return CommonValidators.validate_arabic_text(value, "اسم الفريق")
+
     def validate_city(self, value):
         """Validate city"""
-        if value is None:
-            return value
-        if value not in CITIES:
+        if not value:
+         raise serializers.ValidationError("المدينة مطلوبة")
+        if value not in CITIES_ARRAY:
             raise serializers.ValidationError("المدينة يجب أن يكون من القائمة")
         return value
-
+    
     def validate_phone(self, value):
         """Validate phone with global security protection"""
         if not value:
-            return value
+              raise serializers.ValidationError("رقم الهاتف مطلوب")
         try:
             return SecurityValidator.validate_input(
                 value, "الهاتف", check_sql_injection=True, check_xss=False
             )
         except ValidationError as e:
             raise serializers.ValidationError(str(e))
-
 
 
 class TeamPreviewSerializer(serializers.ModelSerializer):
@@ -209,8 +212,28 @@ class TeamProfileUpdateSerializer(serializers.Serializer):
             user_serializer.is_valid(raise_exception=True)
             user_serializer.save()
 
-        # Update Profile model
-        return super().update(instance, validated_data)
+         # Update Profile model fields
+        if "address" in validated_data:
+            instance.address = validated_data.get("address", instance.address)
+        if "bio" in validated_data:
+            instance.bio = validated_data.get("bio", instance.bio)
+        if "years_of_experience" in validated_data:
+            instance.years_of_experience = validated_data.get("years_of_experience", instance.years_of_experience)
+        if "telegram_link" in validated_data:
+            instance.telegram_link = validated_data.get("telegram_link", instance.telegram_link)
+        if "whatsapp_link" in validated_data:
+            instance.whatsapp_link = validated_data.get("whatsapp_link", instance.whatsapp_link)
+        if "instagram_link" in validated_data:
+            instance.instagram_link = validated_data.get("instagram_link", instance.instagram_link)
+        if "facebook_link" in validated_data:
+            instance.facebook_link = validated_data.get("facebook_link", instance.facebook_link)
+        if "x_link" in validated_data:
+            instance.x_link = validated_data.get("x_link", instance.x_link)
+        if "linkedin_link" in validated_data:
+            instance.linkedin_link = validated_data.get("linkedin_link", instance.linkedin_link)
+        
+        instance.save()
+        return instance
 
 
 class PublicTeamProfileSerializer(serializers.ModelSerializer):
@@ -250,33 +273,33 @@ class PublicTeamProfileSerializer(serializers.ModelSerializer):
 class OwnTeamProfileSerializer(serializers.ModelSerializer):
     """Serializer for own team profile response"""
 
-    full_name = serializers.CharField(max_length=300 , source="user.full_name")
+    team_name = serializers.CharField(max_length=250 , source="user.team_name")
     first_name = serializers.CharField(max_length=100 , source="user.first_name")
+    last_name = serializers.CharField(max_length=100 , source="user.last_name")
+    phone = serializers.CharField(max_length=100 , source="user.phone")
     city = serializers.CharField(max_length=60 , source="user.city") 
-    gender = serializers.CharField(max_length=100 , source="user.gender")
     image = serializers.CharField(max_length=300 , source="user.image")
     created_at = serializers.DateTimeField(source="user.created_at")
     balance = serializers.IntegerField(source="user.balance")
     email = serializers.EmailField(required=False, source="user.email")
     is_banned = serializers.BooleanField(source="user.is_banned")
     is_account_confirmed = serializers.BooleanField(source="user.is_account_confirmed")
-    team_name = serializers.CharField(max_length=250 , source="user.team_name")
     account_type = serializers.CharField(max_length=100, source="user.account_type")    
     uuid = serializers.UUIDField(source="user.uuid")
     class Meta:
         model = TeamProfile
         fields = [        
-            "full_name",
+            "team_name",
             "first_name",
+            "last_name",
+            "phone",
             "city",
-            "gender",
             "image",
             "created_at",
             "balance",
             "email",
             "is_banned",
             "is_account_confirmed",
-            "team_name",
             "account_type",
             "uuid",
             "address",

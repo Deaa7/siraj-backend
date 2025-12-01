@@ -479,8 +479,8 @@ def get_course_details_for_dashboard(request, course_public_id):
 
    try:
    
-    publisher_id = request.user.id
-    course =Course.objects.select_related("publisher").get(public_id=course_public_id)
+    publisher_id = request.user
+    course =Course.objects.select_related("publisher_id").get(public_id=course_public_id)
 
     if publisher_id != course.publisher_id:
         return Response(
@@ -489,9 +489,6 @@ def get_course_details_for_dashboard(request, course_public_id):
         )
    
     serializer = CourseDetailsForDashboardSerializer(course)
-    
-    if not serializer.is_valid():
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     return Response({"course_details": serializer.data}, status=status.HTTP_200_OK)
    

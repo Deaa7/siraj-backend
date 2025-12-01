@@ -520,7 +520,7 @@ def delete_exam(request, exam_public_id):
 @api_view(["GET"])
 def get_exam_details_for_dashboard(request, exam_public_id):
     try:
-        publisher_id = request.user.id
+        publisher_id = request.user
         exam = Exam.objects.select_related("publisher_id").get(public_id=exam_public_id)
 
         if publisher_id != exam.publisher_id:

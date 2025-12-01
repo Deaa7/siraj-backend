@@ -9,6 +9,7 @@ class TeamProfileAdmin(admin.ModelAdmin):
         'user',
         # 'get_user_first_name',
         'team_name',
+        # 'user__balance',
         'get_user_balance',
         'leader_name',
         'number_of_exams',
@@ -23,10 +24,10 @@ class TeamProfileAdmin(admin.ModelAdmin):
     # Fields that can be searched
     search_fields = [
         # 'user__first_name',
-        'team_name',
-        'user__email',
+        # 'team_name',
+        # 'user__email',
         # 'user__phone',
-        'leader_name',
+        # 'leader_name',
         'address',
         'bio',
     ]
@@ -36,8 +37,8 @@ class TeamProfileAdmin(admin.ModelAdmin):
         'verified',
         # 'user__gender',
         # 'user__city',
-        'user__is_account_confirmed',
-        'user__created_at',
+        # 'user__is_account_confirmed',
+        # 'user__created_at',
     ]
     
     # Fields to display in the detail form
@@ -45,9 +46,9 @@ class TeamProfileAdmin(admin.ModelAdmin):
         ('معلومات المستخدم', {
             'fields': ('user',)
         }),
-        ('معلومات الفريق', {
-            'fields': ( 'team_name', 'leader_name', 'address', 'bio')
-        }),
+        # ('معلومات الفريق', {
+        #     'fields': ( 'team_name', 'leader_name', 'address', 'bio')
+        # }),
         ('الإحصائيات', {
             'fields': ('number_of_exams', 'number_of_notes', 'number_of_courses', 'number_of_followers'),
             'classes': ('collapse',)
@@ -79,10 +80,8 @@ class TeamProfileAdmin(admin.ModelAdmin):
     team_name.short_description = 'اسم الفريق'
     team_name.admin_order_field = 'user__team_name'
     
-    def leader_name(self, obj):
-        return obj.user.full_name
-    leader_name.short_description = 'اسم القائد'
-    leader_name.admin_order_field = 'user__full_name'
+    def leader_name(self , obj):
+        return obj.user.first_name +" "+obj.user.last_name
     
     def get_user_balance(self, obj):
         return f"{obj.user.balance}"

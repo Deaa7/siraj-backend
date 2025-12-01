@@ -1,7 +1,7 @@
 
 #models : 
 from rest_framework.views import APIView
-from publisherPlans.models import PublisherPlans as TeacherPlan
+ 
 from teacherProfile.models import TeacherProfile
 from teamProfile.models import TeamProfile
 from transactions.models import Transactions
@@ -16,6 +16,7 @@ from discountCodes.models import DiscountCodes
 from courseStatusTracking.models import CourseStatusTracking
 from examAppTracking.models import ExamAppTracking
 from noteReadTracking.models import NoteReadTracking
+from publisherPlans.models import PublisherPlans 
 #services : 
 from services.notification_management import disable_content_by_admin_notification
 from services.transaction_manager import record_transaction
@@ -835,9 +836,9 @@ def disable_exam(request , exam_public_id):
         
         publisher = None
         if publisher_type == "teacher":
-            publisher = get_object_or_404(TeacherProfile, id=publisher_id)
+            publisher = get_object_or_404(TeacherProfile, user_id=publisher_id)
         elif publisher_type == "team":
-            publisher = get_object_or_404(TeamProfile, id=publisher_id)
+            publisher = get_object_or_404(TeamProfile, user_id=publisher_id)
 
         exam = get_object_or_404(Exam, public_id=exam_public_id)
         
@@ -881,16 +882,16 @@ def activate_exam(request , exam_public_id):
     publisher = None
    
     if publisher_type == "teacher":
-        publisher = get_object_or_404(TeacherProfile, id=publisher_id)
+        publisher = get_object_or_404(TeacherProfile, user_id=publisher_id)
     elif publisher_type == "team":
-        publisher = get_object_or_404(TeamProfile, id=publisher_id)
+        publisher = get_object_or_404(TeamProfile, user_id=publisher_id)
     
-    currentPublisherPlan = TeacherPlan.objects.get(user=publisher.user)
+    currentPublisherPlan = PublisherPlans.objects.get(user=publisher.user_id)
     
     if  exam.disabled_by == "admin"  and activated_by != "admin": 
         return Response({"error": "لا يمكنك تفعيل الامتحان لانه تم تعطيله من قبل إدارة المنصة"}, status=status.HTTP_400_BAD_REQUEST)
     
-    if publisher.number_of_exams + 1 > currentPublisherPlan.number_of_allowed_exams:
+    if publisher.number_of_exams + 1 > currentPublisherPlan.offer.number_of_exams:
         return Response({"error": "تم تجاوز الحد المسموح به للاختبارات"}, status=status.HTTP_400_BAD_REQUEST)
    
     exam.active = True
@@ -920,9 +921,9 @@ def disable_note(request , note_public_id):
         
         publisher = None
         if publisher_type == "teacher":
-            publisher = get_object_or_404(TeacherProfile, id=publisher_id)
+            publisher = get_object_or_404(TeacherProfile, user_id=publisher_id)
         elif publisher_type == "team":
-            publisher = get_object_or_404(TeamProfile, id=publisher_id)
+            publisher = get_object_or_404(TeamProfile, user_id=publisher_id)
 
         note = get_object_or_404(Note, public_id=note_public_id)
 
@@ -968,13 +969,13 @@ def activate_note(request , note_public_id):
     publisher = None
 
     if publisher_type == "teacher":
-        publisher = get_object_or_404(TeacherProfile, id=publisher_id)
+        publisher = get_object_or_404(TeacherProfile, user_id=publisher_id)
     elif publisher_type == "team":
-        publisher = get_object_or_404(TeamProfile, id=publisher_id)
+        publisher = get_object_or_404(TeamProfile, user_id=publisher_id)
     
-    currentPublisherPlan = TeacherPlan.objects.get(user=publisher.user)
+    currentPublisherPlan = PublisherPlans.objects.get(user=publisher.user_id)
     
-    if publisher.number_of_notes + 1 > currentPublisherPlan.number_of_allowed_notes:
+    if publisher.number_of_notes + 1 > currentPublisherPlan.offer.number_of_notes:
         return Response({"error": "تم تجاوز الحد المسموح به للنوطات"}, status=status.HTTP_400_BAD_REQUEST)
 
     note.active = True
@@ -1004,9 +1005,9 @@ def disable_course(request , course_public_id):
         
         publisher = None
         if publisher_type == "teacher":
-            publisher = get_object_or_404(TeacherProfile, id=publisher_id)
+            publisher = get_object_or_404(TeacherProfile, user_id=publisher_id)
         elif publisher_type == "team":
-            publisher = get_object_or_404(TeamProfile, id=publisher_id)
+            publisher = get_object_or_404(TeamProfile, user_id=publisher_id)
 
         course = get_object_or_404(Course, public_id=course_public_id)
 
@@ -1050,13 +1051,13 @@ def activate_course(request , course_public_id):
     publisher = None
     
     if publisher_type == "teacher":
-        publisher = get_object_or_404(TeacherProfile, id=publisher_id)
+        publisher = get_object_or_404(TeacherProfile, user_id=publisher_id)
     elif publisher_type == "team":
-        publisher = get_object_or_404(TeamProfile, id=publisher_id)
+        publisher = get_object_or_404(TeamProfile, user_id=publisher_id)
     
-    currentPublisherPlan = TeacherPlan.objects.get(user=publisher.user)
+    currentPublisherPlan = PublisherPlans.objects.get(user=publisher.user_id)
     
-    if publisher.number_of_courses + 1 > currentPublisherPlan.number_of_allowed_courses:
+    if publisher.number_of_courses + 1 > currentPublisherPlan.offer.number_of_courses:
         return Response({"error": "تم تجاوز الحد المسموح به للدورات"}, status=status.HTTP_400_BAD_REQUEST)
     
     course.active = True
@@ -1125,9 +1126,9 @@ def publisher_statistics(request):
        publisher_type = user.account_type #teacher, team
        publisher = None
        if publisher_type == "teacher":
-           publisher = get_object_or_404(TeacherProfile, user=user.id)
+           publisher = get_object_or_404(TeacherProfile, user_id=user.id)
        elif publisher_type == "team":
-           publisher = get_object_or_404(TeamProfile, user=user.id)
+           publisher = get_object_or_404(TeamProfile, user_id=user.id)
        return Response({
         "number_of_exams": publisher.number_of_exams,
         "number_of_notes": publisher.number_of_notes,

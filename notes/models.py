@@ -40,17 +40,11 @@ class Note(PublicModel):
     number_of_comments = models.IntegerField(
         default=0, blank=True, validators=[MinValueValidator(0)]
     )
-    # number_of_likes = models.IntegerField(
-    #     default=0, blank=True, validators=[MinValueValidator(0)]
-    # )
-    
+   
     number_of_pages = models.IntegerField(
         default=0, blank=True, validators=[MinValueValidator(0)]
     )
     
-    # number_of_reads = models.IntegerField(
-    #     default=0, blank=True, validators=[MinValueValidator(0)]
-    # )
     
     file_size = models.IntegerField(
         default=0, blank=True, validators=[MinValueValidator(0)]

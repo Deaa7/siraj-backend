@@ -74,34 +74,29 @@ class NoteListDashboardSerializer(serializers.ModelSerializer):
         
 class NoteDetailsForDashboardSerializer(serializers.ModelSerializer):
     publisher_public_id = serializers.CharField(source="publisher_id.uuid")
-    publisher_name = serializers.SerializerMethodField("get_publisher_name")
     class Meta:
         model = Note
         fields = [
             "public_id",
+            "active",   
             "name",
             "subject_name",
             "Class",
             "level",
             "price",
             "profit_amount",
+            "description",
             "publisher_public_id",
-            "publisher_name",
             "number_of_downloads",
-            # "number_of_reads",
             "number_of_purchases",
             "number_of_comments",
             "number_of_pages",
             "file_size",
+            "created_at",
+            "updated_at",
+            "visibility",
         ]
-    def get_publisher_name(self, obj):
-        name = ""
-        if obj.publisher_id.account_category == "teacher":
-            name = "الاستاذ " if obj.publisher_id.gender == "M" else "الآنسة " 
-            name += obj.publisher_id.full_name
-        elif obj.publisher_id.account_category == "team":
-            name = "فريق " + obj.publisher_id.team_name
-        return name
+ 
       
 class NoteUpdateSerializer(serializers.ModelSerializer):
     class Meta:

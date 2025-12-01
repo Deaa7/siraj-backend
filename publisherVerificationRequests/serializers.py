@@ -42,9 +42,9 @@ class CreatePublisherVerificationRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = PublisherVerificationRequests
         fields = [
-            "name",
-            "phone",
-            "email",
+            # "name",
+            # "phone",
+            # "email",
             "image1",
             "image2",
         ]

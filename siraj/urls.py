@@ -63,7 +63,7 @@ urlpatterns = [
     path('api/teacher/', include('teacherProfile.urls')),
     path('api/team/', include('teamProfile.urls')),
     path('api/publisher-plans/', include('publisherPlans.urls')),
-    
+    path('api/publisher-verification-requests/', include('publisherVerificationRequests.urls')),
     #common
     path('api/common/', include('common.urls')),
     

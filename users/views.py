@@ -341,13 +341,13 @@ def publisher_login(request):
         Class = None
         if user.account_type == "teacher":
             Class = teacherData.Class
-            # Create response
-            
-            verified = False 
-            if user.account_type == "teacher":
-                verified = teacherData.verified
-            elif user.account_type == "team":
-                verified = teamData.verified
+        
+        # Get verified status
+        verified = False 
+        if user.account_type == "teacher":
+            verified = teacherData.verified
+        elif user.account_type == "team":
+            verified = teamData.verified    
                 
         response = Response(
                 {
@@ -471,13 +471,25 @@ def admin_login(request):
         )
 
 
-@api_view(["GET"])
+@api_view(["POST"])
 def logout(request):
   
     """
     Logout endpoint that deletes refresh token cookie
     """
   
+    refresh_token = request.COOKIES.get("refresh_token")
+    if not refresh_token:
+        refresh_token = request.data.get("refresh")
+        if not refresh_token:
+            return Response(
+                {"error": "Refresh token not found in cookie or request body"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+    token = RefreshToken(refresh_token)
+    token.blacklist()
+
     response = Response(status=status.HTTP_200_OK)
     # Delete cookie with same path and settings as when it was set
     response.delete_cookie(
