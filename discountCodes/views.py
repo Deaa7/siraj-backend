@@ -208,7 +208,7 @@ def delete_discount_code(request, discount_code_public_id):
 
 
 @permission_classes([IsAuthenticated])
-@api_view(["GET"])
+@api_view(["POST"])
 def validate_discount_code(request):
     """
     Validate a discount code by code string

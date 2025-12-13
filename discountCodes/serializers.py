@@ -1,9 +1,13 @@
 from rest_framework import serializers
 from django.utils import timezone
 
-from .models import DiscountCodes
+from .models import DiscountCodes   
+from exams.models import Exam
+from notes.models import Note
+from courses.models import Course
+from publisherOffers.models import PublisherOffers
 from utils.validators import CommonValidators
-
+from django.shortcuts import get_object_or_404
 
 
 
@@ -218,6 +222,8 @@ class DiscountCodeListSerializer(serializers.ModelSerializer):
 
 class DiscountCodeValidateSerializer(serializers.ModelSerializer):
     new_price = serializers.SerializerMethodField(method_name="get_new_price" , required=False)
+    content_public_id = serializers.CharField(write_only=True, required=True)
+    discount_value = serializers.SerializerMethodField(method_name="get_discount_value" , required=False)
     class Meta:
         model = DiscountCodes
         fields = [
@@ -225,26 +231,10 @@ class DiscountCodeValidateSerializer(serializers.ModelSerializer):
             "discount_for",
             "content_public_id",
             "new_price",
+            "discount_value",
+            
         ]
     
-    def get_new_price(self, obj):
-        content = None 
-        if obj.exam_id:
-            content = obj.exam_id
-        elif obj.note_id:
-            content = obj.note_id
-        elif obj.course_id:
-            content = obj.course_id
-        elif obj.offer_id:
-            content = obj.offer_id
-        if not content:
-            raise serializers.ValidationError("المحتوى غير موجود")
-        
-        if obj.discount_type == "percentage":
-            return round(content.price * (1 - obj.discount_value / 100), 2)
-        else:
-            return round(content.price - obj.discount_value, 2)
-        
     def validate_discount_for(self, value):
         if not value:
             raise serializers.ValidationError("نوع المحتوى مطلوب")
@@ -257,24 +247,87 @@ class DiscountCodeValidateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("معرف المحتوى مطلوب")
         return CommonValidators.validate_text_field(value, "معرف المحتوى")
     
-    def validate(self, data):
-        discount_code = data.get("discount_code")
-        discount_for = data.get("discount_for")
-        content_public_id = data.get("content_public_id")
+    def validate_discount_code(self, value):
+        if not value:
+            raise serializers.ValidationError("كود الخصم")
+        return CommonValidators.validate_text_field(value, "كود الخصم")
+     
+    def get_new_price(self, obj):
+        content = None 
+        discountObject =None
+        if obj["discount_for"] == "exam":
+            content = get_object_or_404(Exam, public_id=obj["content_public_id"])
+            discountObject = DiscountCodes.objects.filter(  discount_code = obj["discount_code"] , exam_id = content , discount_for = obj["discount_for"] ,  active=True ).first()
+ 
+        elif obj["discount_for"] == "note":
+            content = get_object_or_404(Note, public_id=obj["content_public_id"])
+            discountObject = DiscountCodes.objects.filter(  discount_code = obj["discount_code"] , note_id = content , discount_for = obj["discount_for"] ,  active=True ).first()
+            
+        elif obj["discount_for"] == "course":
+            content = get_object_or_404(Course, public_id=obj["content_public_id"])
+            discountObject = DiscountCodes.objects.filter(  discount_code = obj["discount_code"] , course_id = content , discount_for = obj["discount_for"] , active=True ).first()
+        elif obj["discount_for"] == "offer":
+            content = get_object_or_404(PublisherOffers, public_id=obj["content_public_id"])
+            discountObject = DiscountCodes.objects.filter(  discount_code = obj["discount_code"] , offer_id = content , discount_for = obj["discount_for"]  , active=True ).first()
+       
+        if not content:
+            raise serializers.ValidationError("المحتوى غير موجود")
         
-        discountObject = DiscountCodes.objects.filter(
-            discount_code=discount_code,
-            discount_for=discount_for,
-            content_public_id=content_public_id,
-            valid_until__gte=timezone.now(),
-            active=True
-        ).first()
         if not discountObject:
             raise serializers.ValidationError("كود الخصم غير صحيح أو غير نشط")
-        
+  
         if discountObject.number_of_remaining_uses is not None and discountObject.number_of_uses >= discountObject.number_of_remaining_uses:
             raise serializers.ValidationError("لا يوجد استخدامات متبقية لهذا الكود")
         
-        return data
+        if discountObject.valid_until is not None and discountObject.valid_until < timezone.now():
+            raise serializers.ValidationError("تاريخ انتهاء الصلاحية لهذا الكود قد انتهى")
+        
+        
+        if discountObject.discount_type == "percentage":
+            if obj["discount_for"] == "offer":
+                return round(content.offer_price * (1 - discountObject.discount_value / 100), 2)
+            else:
+             return round(content.price * (1 - discountObject.discount_value / 100), 2)
+        else:
+            if obj["discount_for"] == "offer":
+                return round(content.offer_price - discountObject.discount_value, 2)
+            else:
+                return round(content.price - discountObject.discount_value, 2)
+        
+  
+   
+    def get_discount_value(self, obj):
+        content = None 
+        discountObject =None
+        if obj["discount_for"] == "exam":
+            content = get_object_or_404(Exam, public_id=obj["content_public_id"])
+            discountObject = DiscountCodes.objects.filter(  discount_code = obj["discount_code"] , exam_id = content , discount_for = obj["discount_for"] ,  active=True ).first()
+ 
+        elif obj["discount_for"] == "note":
+            content = get_object_or_404(Note, public_id=obj["content_public_id"])
+            discountObject = DiscountCodes.objects.filter(  discount_code = obj["discount_code"] , note_id = content , discount_for = obj["discount_for"] ,  active=True ).first()
+            
+        elif obj["discount_for"] == "course":
+            content = get_object_or_404(Course, public_id=obj["content_public_id"])
+            discountObject = DiscountCodes.objects.filter(  discount_code = obj["discount_code"] , course_id = content , discount_for = obj["discount_for"] , active=True ).first()
+        elif obj["discount_for"] == "offer":
+            content = get_object_or_404(PublisherOffers, public_id=obj["content_public_id"])
+            discountObject = DiscountCodes.objects.filter(  discount_code = obj["discount_code"] , offer_id = content , discount_for = obj["discount_for"]  , active=True ).first()
+       
+        if not content:
+            raise serializers.ValidationError("المحتوى غير موجود")
+        
+        if not discountObject:
+            raise serializers.ValidationError("كود الخصم غير صحيح أو غير نشط")
+  
+ 
+        discount_value = ""
+        if discountObject.discount_type == "percentage":
+            discount_value = str(discountObject.discount_value) + "%"
+        else :
+            discount_value = str(discountObject.discount_value) + "ل.س"
+        
+        return discount_value
     
+       
     

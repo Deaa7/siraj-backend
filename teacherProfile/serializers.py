@@ -256,6 +256,7 @@ class PublicTeacherProfileSerializer(serializers.ModelSerializer):
             "linkedin_link",
             "bio",
             "years_of_experience",
+            "verified",
         ]
         read_only_fields = fields
 

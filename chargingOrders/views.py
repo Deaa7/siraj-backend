@@ -1,16 +1,16 @@
-from django.shortcuts import get_object_or_404
-from django.utils import timezone
-from rest_framework.decorators import  permission_classes, api_view
+# from django.shortcuts import get_object_or_404
+# from django.utils import timezone
+from rest_framework.decorators import  permission_classes
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from .models import ChargingOrders
-from .serializers import ChargingOrderCreateSerializer, GetChargingOrdersSerializer
+from .serializers import ChargingOrderCreateSerializer
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
-from services.parameters_validator import validate_pagination_parameters
-from transactions.models import Transactions
-from notifications.models import Notifications
+# from services.parameters_validator import validate_pagination_parameters
+# from transactions.models import Transactions
+# from notifications.models import Notifications
 from .tasks import charging_order_success_email_notification
 
 
@@ -24,6 +24,7 @@ class create_charging_order(APIView):
         """
         Create a charging order
         """
+        
         serializer = ChargingOrderCreateSerializer(data=request.data)
         if serializer.is_valid():
             
@@ -38,7 +39,7 @@ class create_charging_order(APIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
                 
-            serializer.save(user=request.user , partial=True)
+            serializer.save(user=request.user)
             
             return Response(
                 {"message": "تم إنشاء الطلب بنجاح"}, status=status.HTTP_200_OK

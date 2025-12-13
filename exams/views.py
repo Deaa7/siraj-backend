@@ -6,7 +6,13 @@ from rest_framework import status
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
 from django.db.models import Avg
-
+import fitz  # PyMuPDF
+import openai
+from openai import OpenAI
+from django.conf import settings
+import os
+import tempfile
+import json
 # tasks
 from notifications.tasks import publishing_exam_notification
 from utils.validators import CommonValidators
@@ -19,6 +25,7 @@ from studentPremiumContent.models import StudentPremiumContent
 from examAppTracking.models import ExamAppTracking
 from MCQ.models import MCQ
 from users.models import User
+from units.models import Unit
 
 # serializers
 from MCQ.serializers import MCQSerializer
@@ -65,21 +72,8 @@ def change_number_of_comments(request, exam_public_id):
         return Response(status=status.HTTP_200_OK)
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-
-# @permission_classes([IsAuthenticated])
-# @api_view(["PATCH"])
-# def change_number_of_likes(request, exam_public_id):
-#     try:
-#         number = request.data.get("number", 1)
-#         exam = get_object_or_404(Exam, public_id=exam_public_id)
-#         exam.number_of_likes += number
-#         exam.save()
-#         return Response(status=status.HTTP_200_OK)
-#     except Exception as e:
-#         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-
+    
+    
 @permission_classes([IsAuthenticated])
 @api_view(["PATCH"])
 def change_exam_metrics(
@@ -105,12 +99,17 @@ def create_exam(request):
         user = get_object_or_404(User, id=request.user.id)
         publisher_id = user.id
         publisher_type = user.account_type
-
-        if not check_publishing_content_availability(
+        
+        if publisher_type != "teacher" and publisher_type != "team" :
+            return Response(
+                 "غير مصرح لك بإنشاء اختبار",
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if not check_publishing_content_availability(   
             publisher_id, publisher_type, "exam"
         ):
             return Response(
-                {"error": "لقد تجاوزت الحد المسموح به لنشر الاختبارات"},
+                "لقد تجاوزت الحد المسموح به لنشر الاختبارات",
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -118,16 +117,77 @@ def create_exam(request):
         data = request.data.copy()
         data['publisher_id'] = publisher_id
         
+        mcqs_data = request.data.get('questions', [])
+        if not mcqs_data:
+            return Response(
+                "يجب أن يكون لديك سؤال واحد على الأقل",
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        data['number_of_questions'] = len(mcqs_data) if isinstance(mcqs_data, list) else 0
+     
         serializer = ExamCreateSerializer(data=data)
 
         if serializer.is_valid():
             exam = serializer.save()
+            
+            # Handle units many-to-many relationship
+            unit_public_ids = request.data.get('unit', [])
+            if unit_public_ids:
+                if not isinstance(unit_public_ids, list):
+                    return Response(
+                        "يجب أن تكون الوحدات مصفوفة",
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
+                # Get Unit objects by public_id
+                units = Unit.objects.filter(public_id__in=unit_public_ids)
+                found_public_ids = set(units.values_list('public_id', flat=True))
+                missing_public_ids = set(unit_public_ids) - found_public_ids
+                
+                if missing_public_ids:
+                    return Response(
+                        f"الوحدات التالية غير موجودة: {', '.join(missing_public_ids)}",
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
+                # Associate units with exam
+                exam.units.set(units)
+            
+            # Create MCQs if provided
+  
+            if mcqs_data:
+                for mcq_data in mcqs_data:
+                    mcq_data_copy = mcq_data.copy()
+                    mcq_data_copy['exam'] = exam.id
+                    mcq_serializer = MCQSerializer(data=mcq_data_copy)
+                    if mcq_serializer.is_valid():
+                        mcq_serializer.save()
+                    else:
+                        # If MCQ validation fails, return error
+                        return Response(
+                           f"خطأ في إنشاء السؤال: {mcq_serializer.errors}",
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+            
             # publishing_exam_notification.delay(exam.id, user)
-            return Response(status=status.HTTP_201_CREATED)
+            profile = None
+            if publisher_type == "teacher":
+                profile = get_object_or_404(TeacherProfile, user=user)
+            elif publisher_type == "team":
+                profile = get_object_or_404(TeamProfile, user=user)
+            profile.number_of_exams += 1
+            profile.save()
+            return Response(
+                {
+                    "message": "تم إنشاء الاختبار بنجاح",
+                    "exam_public_id": exam.public_id,
+                },
+                status=status.HTTP_201_CREATED,
+            )
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
-        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response( str(e), status=status.HTTP_400_BAD_REQUEST)
 
 
 @permission_classes([IsAuthenticated])
@@ -263,7 +323,7 @@ def get_exam_cards(request):
       
         exams = Exam.objects.select_related("publisher_id").filter(
             active=True, visibility="public"
-        )
+        ).order_by("-created_at")
         
 
         if publisher_name:
@@ -306,11 +366,11 @@ def get_exam_cards(request):
 @api_view(["GET"])
 def get_exam_cards_by_publisher_public_id(request, publisher_public_id):
     try:
-        limit, count = validate_pagination_parameters(request.data.get("count", 0), request.data.get("limit", 7))
+        count, limit = validate_pagination_parameters(request.query_params.get("count", 0), request.query_params.get("limit", 7))
 
         exams = Exam.objects.select_related("publisher_id").filter(
             active=True, visibility="public", publisher_id__uuid=publisher_public_id
-        )
+        ).order_by("-created_at")
 
         begin = count * limit
         
@@ -393,7 +453,7 @@ def get_exams_list_for_dashboard(request):
         if price != "all":
             price = CommonValidators.validate_money_amount(price , "السعر")
         
-        exams = Exam.objects.filter(publisher_id=publisher_id)
+        exams = Exam.objects.filter(publisher_id=publisher_id).order_by("-created_at")
 
         if exams.count() <= 0:
             return Response(
@@ -542,7 +602,7 @@ def get_exam_and_mcqs(request, exam_public_id):
     try:
         exam = Exam.objects.select_related("publisher_id").get(public_id=exam_public_id)
         exam_serializer = ExamDetailsSerializer(exam)
-        mcqs = MCQ.objects.filter(exam_id=exam.id)
+        mcqs = MCQ.objects.filter(exam_id=exam.id).order_by("-created_at")
         mcqs_serializer = MCQSerializer(mcqs, many=True)
         return Response(
             {"exam": exam_serializer.data, "mcqs": mcqs_serializer.data},
@@ -552,6 +612,13 @@ def get_exam_and_mcqs(request, exam_public_id):
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
+# Configure OpenAI client for DeepSeek
+client = openai.OpenAI(
+    api_key=settings.DEEPSEEK_API_KEY,
+    base_url="https://api.deepseek.com"  # DeepSeek API endpoint
+)
+
+
 @permission_classes([IsAuthenticated])
 @api_view(["GET"])
 def get_exam_preview_list(request):
@@ -559,9 +626,203 @@ def get_exam_preview_list(request):
         user = request.user 
         publisher = get_object_or_404(User, id=user.id);
         exams = Exam.objects.select_related("publisher_id").filter(
-            publisher_id=publisher.id
+            publisher_id=publisher.id , price__gt = 0
         )
         serializer = ExamPreviewListSerializer(exams, many=True)
         return Response({"exams": serializer.data}, status=status.HTTP_200_OK)
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+@permission_classes([IsAuthenticated])
+@api_view(['POST'])
+def auto_generate_exam_mcqs(request):
+    """
+    Endpoint to receive extracted text and return generated MCQs.
+    
+    Expected JSON request format:
+    {
+        "text": "Extracted text from PDF...",
+        "num_questions": 5,
+    }
+    
+    Returns:
+    - JSON with generated MCQs and metadata
+    """
+    try:
+        # Parse JSON request
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return Response(
+                {'error': 'Invalid JSON format in request body.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validate required fields
+        text = data.get('text', '').strip()
+        if not text:
+            return Response(
+                {'error': 'No text provided. Please provide extracted text.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+ 
+        # Get optional parameters with defaults
+        num_questions = int(data.get('num_questions', 5))
+ 
+        # Validate parameters
+        if num_questions < 1 or num_questions > 50:
+            return Response(
+                {'error': 'Number of questions must be between 1 and 50.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Generate MCQs using DeepSeek API
+        mcqs =generate_mcqs_with_deepseek(text, num_questions)
+        
+        # Prepare response
+        response_data = {
+            'success': True,
+            'metadata': {
+                'text_length': len(text),
+                'num_questions_generated': len(mcqs),
+                'num_questions_requested': num_questions,
+            },
+            'questions': mcqs
+        }
+        
+        return Response(response_data, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response(
+            {'error': f'Failed to generate MCQs: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+def generate_mcqs_with_deepseek(text, num_questions):
+    """
+    Generate MCQs using DeepSeek API from provided text.
+    
+    Args:
+        text: Extracted text from PDF
+        num_questions: Number of questions to generate
+
+        
+    Returns:
+        List of MCQ dictionaries
+    """
+    try:
+        # Prepare the prompt with enhanced instructions
+
+        
+        prompt = f"""Generate {num_questions} multiple-choice questions based on the following text.
+        
+        IMPORTANT: Return ONLY valid JSON with this EXACT structure:
+        {{
+            "questions": [
+                {{
+                    "q": "Clear and concise question text?",
+                    "options": {{
+                        "A": "Option A",
+                        "B": "Option B", 
+                        "C": "Option C",
+                        "D": "Option D "
+                    }},
+                    "ans": "A",
+                    "exp": "Detailed explanation why this is correct",
+                }}
+            ]
+        }}
+        
+        Text content:
+        {text[:30000]}  # Limit text to avoid token limits
+        
+        Guidelines:
+        1. Questions must test comprehension of key concepts in the text
+        2. Each question must have exactly 4 distinct, plausible options
+        3. Only one correct answer per question
+        4. Vary question types as specified
+        5. Ensure questions cover different parts of the text
+        6. Return ONLY the JSON object, no other text or markdown
+        7. Questions should be in Arabic if the text is in Arabic, otherwise in English
+        8. exclude the introduction and unimportant data like the author story etc ,and always move to the first idea of pdf 
+        Start your response with {{"""
+        
+        # Call DeepSeek API
+        response = client.chat.completions.create(
+            model="deepseek-reasoner",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are an expert educational assessment creator. Generate high-quality, diverse multiple-choice questions. Always respond with valid JSON only, starting with '{'."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            temperature=0.7,
+            max_tokens=10000,
+            response_format={"type": "json_object"}
+        )
+        
+        # Parse the response
+        response_content = response.choices[0].message.content
+        
+        # Clean the response
+        response_content = response_content.strip()
+        
+        # Remove any markdown code blocks
+        if '```json' in response_content:
+            response_content = response_content.split('```json')[1]
+        elif '```' in response_content:
+            response_content = response_content.split('```')[1]
+        
+        response_content = response_content.strip()
+        
+        # Ensure response starts with '{'
+        if not response_content.startswith('{'):
+            # Find the first '{' in the response
+            start_index = response_content.find('{')
+            if start_index != -1:
+                response_content = response_content[start_index:]
+            else:
+                raise Exception("No JSON object found in response")
+        
+        # Parse JSON
+        result = json.loads(response_content)
+        questions = result.get('questions', [])
+        
+        # Validate and format questions
+        validated_questions = []
+        for i, q in enumerate(questions):
+            # Ensure all required fields exist
+            if not q.get('q') or not q.get('options'):
+                continue
+            
+            # Validate options structure
+            options = q['options']
+            if not isinstance(options, dict) or len(options) < 4:
+                continue
+            
+            validated_questions.append({
+                'q': q['q'],
+                'options': options,
+                'ans': q.get('ans', 'A').upper(),
+                'exp': q.get('exp', 'No explanation provided'),
+            })
+        
+        # Limit to requested number
+        final_questions = validated_questions[:num_questions]
+        
+        if not final_questions:
+            raise Exception("No valid questions were generated from the text")
+        
+        return final_questions
+        
+    except json.JSONDecodeError as e:
+        raise Exception(f"AI returned invalid JSON format: {str(e)}")
+    except Exception as e:
+        raise Exception(f"Failed to generate questions: {str(e)}")

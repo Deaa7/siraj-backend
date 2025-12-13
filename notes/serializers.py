@@ -182,6 +182,8 @@ class NoteCardsSerializer(serializers.ModelSerializer):
             "price",
             "description",
             "number_of_downloads",
+            "number_of_comments",
+            "file_size",
             "number_of_pages",
             "publisher_public_id",
             "publisher_name",
@@ -189,10 +191,10 @@ class NoteCardsSerializer(serializers.ModelSerializer):
         
     def get_publisher_name(self, obj):
         name = ""
-        if obj.publisher_id.account_category == "teacher":
+        if obj.publisher_id.account_type == "teacher":
             name = "الاستاذ " if obj.publisher_id.gender == "M" else "الآنسة " 
             name += obj.publisher_id.full_name
-        elif obj.publisher_id.account_category == "team":
+        elif obj.publisher_id.account_type == "team":
             name = "فريق " + obj.publisher_id.team_name
         return name
       
@@ -215,4 +217,5 @@ class NotePreviewListSerializer(serializers.ModelSerializer):
         fields = [
             "public_id",
             "name",
+            "price",
         ]

@@ -64,8 +64,12 @@ urlpatterns = [
     path('api/team/', include('teamProfile.urls')),
     path('api/publisher-plans/', include('publisherPlans.urls')),
     path('api/publisher-verification-requests/', include('publisherVerificationRequests.urls')),
+    path('api/publisher-offers/', include('publisherOffers.urls')),
     #common
     path('api/common/', include('common.urls')),
+    
+    #units
+    path('api/units/', include('units.urls')),
     
     #telegram
     # path('api/telegram/', include('telegramBot.urls')),

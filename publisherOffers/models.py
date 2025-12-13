@@ -3,7 +3,7 @@ from django.core.validators import MinValueValidator
 from common.models import PublicModel
 # Create your models here.
 
-class PublisherOffers(PublicModel):
+class   PublisherOffers(PublicModel):
     
     offer_name = models.CharField(max_length= 100, default='')
     offer_price = models.DecimalField(max_digits=10, decimal_places=2,default=0 , blank=True )

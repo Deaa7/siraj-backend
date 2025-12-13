@@ -59,7 +59,7 @@ def process_existing_pdf_task(self, file_path, note_id=0):
                 ai_results = generate_summary_and_mcqs(pdf_text , client)
                 logger.info("Summary and MCQs generated successfully")
                
-                processed_pdf = NotesAppendixes.objects.get_or_create(note_id=note)
+                processed_pdf, created = NotesAppendixes.objects.get_or_create(note_id=note)
                 processed_pdf.summary = ai_results['summary']
                 processed_pdf.MCQ = ai_results['mcqs']
                 processed_pdf.save()
@@ -98,8 +98,8 @@ def generate_summary_and_mcqs(text, client : OpenAI):
     """
     try:
         # Truncate very long texts to fit context window
-        if len(text) > 10000:
-            text = text[:10000] 
+        if len(text) > 30000:
+            text = text[:30000] 
             
         response = client.chat.completions.create(
             model="deepseek-reasoner",
@@ -116,12 +116,11 @@ def generate_summary_and_mcqs(text, client : OpenAI):
                     2-Key Terms: A bulleted list of the 3-5 most important vocabulary words with simple, clear definitions.
 
                     3-The Core Idea: A concise paragraph explaining the main concept in simple, direct language.
+ 
+                   4-Study Tip: One practical piece of advice on how to remember or understand this topic (e.g., "A good way to remember this sequence is the acronym PEMDAS.").
 
-                    4-Why It Matters: A brief note on how this concept connects to the real world or the broader subject.
-
-                    5-Study Tip: One practical piece of advice on how to remember or understand this topic (e.g., "A good way to remember this sequence is the acronym PEMDAS.").
-
-                    6-Test Yourself: 2-3 key questions that a test might ask about this topic with the correct answer and the explanation            
+                    5-Test Yourself: 2-3 key questions that a test might ask about this topic with the correct answer and the explanation        
+                 
                     Return ONLY valid JSON with this exact structure:
                     {
                         "summary": "Comprehensive summary of the document in markdown format...",
@@ -129,7 +128,7 @@ def generate_summary_and_mcqs(text, client : OpenAI):
                             {
                                 "q": "Question text here",
                                 "options": ["A", "B", "C", "D"],
-                                "ans": 0,
+                                "ans": "A",
                                 "exp": "Brief explanation of correct answer"
                             }
                         ]
@@ -140,7 +139,7 @@ def generate_summary_and_mcqs(text, client : OpenAI):
                     "content": f"analyze this document and generate both a comprehensive summary in markdown format and up to 30 MCQ:\n\n{text}"
                 }
             ],
-            max_tokens=20000,
+            max_tokens=50000,
             temperature=0.5
         
         )

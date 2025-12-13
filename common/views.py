@@ -44,6 +44,7 @@ from django.db.models import Count, Sum
 from collections import defaultdict
 from utils.security import SecurityValidator
 
+from services.publisher_plan_check import  check_publishing_content_availability
 
 load_dotenv()
 
@@ -224,13 +225,6 @@ def _get_discount_object(discount_code , content_type, content_public_id):
        else:
         return None
         
-def _get_final_discount_value(discount_value, discount_type):
-
-    if discount_type == "fixed":
-        return discount_value
-    elif discount_type == "percentage":
-        return discount_value + "%"
-
 
 def _get_final_price(price, discount_value, discount_type):
 
@@ -1139,7 +1133,47 @@ def publisher_statistics(request):
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
- 
+
+@permission_classes([IsAuthenticated])
+@api_view(["GET"])
+def check_publishing_availability(request):
+    """
+    Check if user can publish a note before uploading files
+    """
+    try:
+        content_type = request.query_params.get('content_type');
+        
+        if content_type not in ['exam' , 'note' , 'course'] :
+             return Response(
+            {"can_publish": False, "message": "نوع محتوى غير معرف"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+        user = get_object_or_404(User, id=request.user.id)
+        publisher_id = user.id
+        publisher_type = user.account_type
+        
+        can_publish = check_publishing_content_availability(publisher_id, publisher_type, content_type)
+        
+        if can_publish:
+            return Response(
+                {"can_publish": True},
+                status=status.HTTP_200_OK
+            )
+        else:
+            return Response(
+                {
+                    "can_publish": False,
+                    "message": "لقد تجاوزت الحد المسموح به لنشر النوطات"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    except Exception as e:
+        return Response(
+            {"can_publish": False, "message": str(e)},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+
 
 class PresignedURLView(APIView):
     permission_classes([IsAuthenticated])
@@ -1160,40 +1194,32 @@ class PresignedURLView(APIView):
         # Generate unique file key
         file_extension = file_name.split('.')[-1] if '.' in file_name else 'bin'
         unique_id = uuid.uuid4()
-        file_key = f"uploads/{unique_id}.{file_extension}"
+        # file_key = f"uploads/{unique_id}.{file_extension}"
 
         # Initialize Backblaze S3 client
         s3_client = boto3.client(
             's3',
             endpoint_url=settings.AWS_ENDPOINT_URL,  # Your Backblaze endpoint
+             region_name=settings.AWS_REGION_NAME,
             aws_access_key_id=settings.AWS_ACCESS_KEY_ID,  # Your keyID
             aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,  # Your applicationKey
-            config=Config(signature_version='s3v4')
+            config=Config(signature_version='s3v4'),
         )
+ 
 
         try:
-            # Generate presigned URL for PUT operation
+    
             presigned_url = s3_client.generate_presigned_url(
-                'put_object',
-                Params={
-                    'Bucket': settings.AWS_BUCKET_NAME,
-                    'Key': file_key,
-                    'ContentType': file_type,
-                    # Optional: Add content length restriction for security
-                    # 'ContentLength': file_size,
-                },
-                ExpiresIn=10000,  # URL expires in about 3 hours
-                HttpMethod='PUT'
-            )
-
-            # Construct the final public URL
-            final_url = f"https://your-bucket-name.s3.your-backblaze-region.backblazeb2.com/{file_key}"
-
-            return Response({
-                'presigned_url': presigned_url,
-                'file_key': file_key,
-                'final_url': final_url
-            })
+                 ClientMethod="put_object",
+            Params={
+                'Bucket': settings.AWS_BUCKET_NAME,
+                'Key': file_name,
+                'ContentType': file_type, 
+                # ContentType is CRITICAL. It must match what the frontend sends exactly.
+            },
+            ExpiresIn=3600
+        )
+            return Response({'url': presigned_url})
 
         except Exception as e:
             return Response(

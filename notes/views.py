@@ -81,7 +81,6 @@ def change_number_of_comments(request, note_public_id):
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-
 @permission_classes([IsAuthenticated])
 @api_view(["POST"])
 def create_note(request):
@@ -89,14 +88,15 @@ def create_note(request):
         user = get_object_or_404(User, id=request.user.id)
         publisher_id = user.id
         publisher_type = user.account_type
-        print(publisher_id, publisher_type , request.user.id)
+      
         if not check_publishing_content_availability(publisher_id, publisher_type, "note"):
             return Response(
-                {"error": "لقد تجاوزت الحد المسموح به لنشر النوطات"}, 
+                 "لقد تجاوزت الحد المسموح به لنشر النوطات", 
                 status=status.HTTP_400_BAD_REQUEST
             )
-    
-        serializer = NoteCreateSerializer(data=request.data)
+        requestData = request.data;
+        requestData["publisher_id"] =publisher_id
+        serializer = NoteCreateSerializer(data=requestData)
         if serializer.is_valid():
             note = serializer.save()
 
@@ -106,7 +106,7 @@ def create_note(request):
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
-        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response( str(e), status=status.HTTP_400_BAD_REQUEST)
 
 
 @permission_classes([IsAuthenticated])
@@ -289,11 +289,11 @@ def get_note_cards(request):
 @api_view(["GET"])
 def get_note_cards_by_publisher_public_id(request, publisher_public_id):
     try:
-        limit, count = validate_pagination_parameters(request.data.get("count", 0), request.data.get("limit", 7))
+        count,limit = validate_pagination_parameters(request.query_params.get("count", 0), request.query_params.get("limit", 7))
 
         notes = Note.objects.select_related("publisher_id").filter(
-            active=True, visibility="public", publisher__uuid=publisher_public_id
-        )
+            active=True, visibility="public", publisher_id__uuid=publisher_public_id
+        ).order_by('-created_at')
 
         begin = count * limit
         if begin > notes.count():
@@ -493,7 +493,7 @@ def get_note_content(request, note_public_id):
 def get_note_preview_list(request):
     try:
         user = request.user
-        notes = Note.objects.select_related("publisher_id").filter(publisher_id=user.id)
+        notes = Note.objects.select_related("publisher_id").filter(publisher_id=user.id , price__gt = 0 )
         serializer = NotePreviewListSerializer(notes, many=True)
         return Response({"notes": serializer.data}, status=status.HTTP_200_OK)
     except Exception as e:

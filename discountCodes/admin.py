@@ -6,4 +6,4 @@ from .models import DiscountCodes
 
 @admin.register(DiscountCodes)
 class DiscountCodesAdmin(admin.ModelAdmin):
-    list_display = ['discount_code', 'discount_for', 'discount_value', 'valid_until', 'active']
+    list_display = ['discount_code', 'discount_for', 'discount_value', 'valid_until', 'active','public_id']

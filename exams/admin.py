@@ -10,7 +10,6 @@ class ExamAdmin(admin.ModelAdmin):
         "public_id",
         "full_name",
         'publisher_id',
-        'units',
         'Class',
         'subject_name',
         'price',
@@ -29,6 +28,7 @@ class ExamAdmin(admin.ModelAdmin):
         'profit_amount',
         'description',
     ]
+    filter_horizontal = ('units',)
     def full_name(self, obj):
         name = ""
         if obj.publisher_id.account_type == "teacher":
@@ -44,7 +44,7 @@ class ExamAdmin(admin.ModelAdmin):
         'name',
         'publisher_id__username',
         'publisher_id__email',
-        'units',
+        # 'units',
         'Class',
         'subject_name',
         'public_id',
@@ -66,7 +66,7 @@ class ExamAdmin(admin.ModelAdmin):
             'fields': ('publisher_id'  ,)
         }),
         ('المعلومات الأساسية', {
-            'fields': ( 'name' ,'units', 'Class', 'subject_name', 'price')
+            'fields': ( 'name' , 'Class', 'subject_name', 'price')
         }),
         ('الإحصائيات', {
             'fields': ('number_of_apps', 'number_of_purchases', 'number_of_questions', 'number_of_comments', 'result_avg', 'level', 'profit_amount'),

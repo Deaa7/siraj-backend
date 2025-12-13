@@ -137,6 +137,8 @@ INSTALLED_APPS = [
     "comments",
     "followers",
     "servicePurchaseHistory",
+    "units",
+    
     # "telegramBot",
 ]
 

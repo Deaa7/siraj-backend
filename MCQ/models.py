@@ -12,14 +12,14 @@ class MCQ(PublicModel):
         ('E', 'E'),
     ]
     exam = models.ForeignKey(Exam, on_delete=models.CASCADE)
-    question = models.TextField(max_length = 10000, validators=[MinLengthValidator(2)])
+    question = models.TextField(max_length = 10000, validators=[MinLengthValidator(1)])
     question_image = models.CharField(max_length=400, null=True, blank=True)
-    option_A = models.TextField(max_length = 10000, validators=[MinLengthValidator(2)])
-    option_B = models.TextField(max_length = 10000, validators=[MinLengthValidator(2)])
-    option_C = models.TextField(blank=True, null=True , max_length = 10000, validators=[MinLengthValidator(2)])
-    option_D = models.TextField(blank=True, null=True , max_length = 10000, validators=[MinLengthValidator(2)])
-    option_E = models.TextField(blank=True, null=True , max_length = 10000, validators=[MinLengthValidator(2)])
+    option_A = models.TextField(max_length = 10000, validators=[MinLengthValidator(1)])
+    option_B = models.TextField(max_length = 10000, validators=[MinLengthValidator(1)])
+    option_C = models.TextField(blank=True, null=True , max_length = 10000, validators=[MinLengthValidator(1)])
+    option_D = models.TextField(blank=True, null=True , max_length = 10000, validators=[MinLengthValidator(1)])
+    option_E = models.TextField(blank=True, null=True , max_length = 10000, validators=[MinLengthValidator(1)])
     right_answer = models.CharField(max_length=1, choices=CHOICES)
-    explanation = models.TextField(blank=True, null=True ,max_length = 10000, validators=[MinLengthValidator(2)])
+    explanation = models.TextField(blank=True, null=True ,max_length = 10000, validators=[MinLengthValidator(1)])
     is_arabic = models.BooleanField(default=True , blank=True)
  

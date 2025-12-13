@@ -318,9 +318,9 @@ def get_course_cards(request):
 def get_course_cards_by_publisher_public_id(request, publisher_public_id):
 
    try:
-    limit, count = validate_pagination_parameters(request.data.get("count", 0), request.data.get("limit", 7))
+    count, limit = validate_pagination_parameters(request.query_params.get("count", 0), request.query_params.get("limit", 7))
 
-    courses = Course.objects.select_related("publisher_id").filter(active=True, publisher_id__uuid=publisher_public_id)
+    courses = Course.objects.select_related("publisher_id").filter(active=True, publisher_id__uuid=publisher_public_id).order_by("-created_at")
 
     begin = count * limit
     if begin > courses.count():
@@ -522,7 +522,7 @@ def get_course_and_lessons(request, course_public_id):
 def get_course_preview_list(request):
     try:
         user = request.user
-        courses = Course.objects.select_related("publisher_id").filter(publisher_id=user.id)
+        courses = Course.objects.select_related("publisher_id").filter(publisher_id=user.id , price__gt = 0)
         serializer = CoursePreviewListSerializer(courses, many=True)
         return Response({"courses": serializer.data}, status=status.HTTP_200_OK)
     except Exception as e:

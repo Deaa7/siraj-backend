@@ -15,7 +15,7 @@ urlpatterns = [
     path('get-average-results-for-all-exams-by-publisher-id/', views.get_average_results_for_all_exams_by_publisher_id, name='get_average_results_for_all_exams_by_teacher_id'),
     path('get-exam-details-for-dashboard/<str:exam_public_id>/', views.get_exam_details_for_dashboard, name='get_exam_details_for_dashboard'),
     path('get-exam-preview-list/', views.get_exam_preview_list, name='get_exam_preview_list'),
-    
+    path('auto-generate-exam-mcqs/', views.auto_generate_exam_mcqs, name='auto_generate_exam_mcqs'),
     #students
     path('get-exam-details/<str:exam_public_id>/', views.get_exam_details, name='get_exam_details'),
     path('get-exam-cards/', views.get_exam_cards, name='get_exam_cards'),

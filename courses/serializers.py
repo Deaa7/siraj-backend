@@ -171,18 +171,22 @@ class CourseListSerializer(serializers.ModelSerializer):
             "publisher_public_id",
             "price",
             "course_image",
+            "description",
             "estimated_time",
             "number_of_lessons",
             "number_of_enrollments",
+            "number_of_completions",
             "number_of_comments",
+            "active",
+            "level",
         ]
         
     def get_publisher_name(self, obj):
         name = ""
-        if obj.publisher_id.account_category == "teacher":
+        if obj.publisher_id.account_type == "teacher":
             name = "الاستاذ " if obj.publisher_id.gender == "M" else "الآنسة " 
             name += obj.publisher_id.full_name
-        elif obj.publisher_id.account_category == "team":
+        elif obj.publisher_id.account_type == "team":
             name = "فريق " + obj.publisher_id.team_name
         return name
     
@@ -289,4 +293,5 @@ class CoursePreviewListSerializer(serializers.ModelSerializer):
         fields = [
             "public_id",
             "name",
+            "price",
         ]

@@ -224,10 +224,10 @@ class public_teacher_profile(APIView):
  
    throttle_classes = [ScopedRateThrottle]
    throttle_scope = 'public_teacher_profile'
-   def get(self, request, teacher_uuid: str):
+   def get(self, request, public_id: str):
     try:
         
-        teacher = TeacherProfile.objects.select_related("user").get(user__uuid=teacher_uuid)
+        teacher = TeacherProfile.objects.select_related("user").get(user__uuid=public_id)
         serializer = PublicTeacherProfileSerializer(teacher)
         return Response(serializer.data, status=200)
         

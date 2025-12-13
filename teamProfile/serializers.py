@@ -243,7 +243,7 @@ class PublicTeamProfileSerializer(serializers.ModelSerializer):
     image = serializers.CharField(max_length=300, source="user.image")
     created_at = serializers.DateTimeField(source="user.created_at")
     account_type = serializers.CharField(max_length=100, source="user.account_type")
-    uuid = serializers.UUIDField(source="user.uuid")
+    public_id = serializers.UUIDField(source="user.uuid")
     class Meta:
         model = TeamProfile
         fields = [
@@ -252,7 +252,8 @@ class PublicTeamProfileSerializer(serializers.ModelSerializer):
             "image",
             "created_at",
             "account_type",
-            "uuid",
+            "public_id",
+            "verified",
             "address",
             "number_of_exams",
             "number_of_notes",

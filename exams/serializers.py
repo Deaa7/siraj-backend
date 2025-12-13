@@ -3,7 +3,7 @@ from .models import Exam
 from utils.security import SecurityValidator
 from django.core.exceptions import ValidationError
 from utils.validators import CommonValidators
-
+from Constants import CLASSES_ARRAY,SUBJECT_NAMES_ARRAY ,LEVELS_ARRAY
 class ExamCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Exam
@@ -12,7 +12,6 @@ class ExamCreateSerializer(serializers.ModelSerializer):
             "publisher_id",
             "subject_name",
             "Class",
-            "units",
             "level",
             "number_of_questions",
             "description",
@@ -20,6 +19,7 @@ class ExamCreateSerializer(serializers.ModelSerializer):
             "visibility",
         ]
 
+ 
     def validate_name(self, value):
         """Validate name with global security protection"""
         if not value:
@@ -32,6 +32,28 @@ class ExamCreateSerializer(serializers.ModelSerializer):
         except ValidationError as e:
             raise serializers.ValidationError(str(e))
 
+    def validate_Class(self, value): 
+           """Validate Class """
+           if value not in CLASSES_ARRAY:
+            raise serializers.ValidationError("الصف غير صالح")
+           
+           return value
+        
+    def validate_subject_name(self, value): 
+           """Validate subject_name """
+           if value not in SUBJECT_NAMES_ARRAY:
+            raise serializers.ValidationError("المادة غير صالحة")
+           
+           return value
+
+    def validate_level(self, value): 
+           """Validate level """
+           if value not in LEVELS_ARRAY:
+            raise serializers.ValidationError("المستوى غير صالح")
+           
+           return value
+
+
     def validate_description(self, value):
         """Validate description with global security protection"""
         if not value:
@@ -39,7 +61,7 @@ class ExamCreateSerializer(serializers.ModelSerializer):
 
         try:
             return SecurityValidator.validate_input(
-                value, "المواد الدراسية", check_sql_injection=True, check_xss=False
+                value, "الوصف ", check_sql_injection=True, check_xss=False
             )
         except ValidationError as e:
             raise serializers.ValidationError(str(e))
@@ -141,6 +163,7 @@ class ExamCardsSerializer(serializers.ModelSerializer):
             "level",
             "number_of_questions",
             "number_of_apps",
+            "number_of_comments",
             "description",
             "price",
             "result_avg",
@@ -159,6 +182,7 @@ class ExamCardsSerializer(serializers.ModelSerializer):
 class ExamDetailsSerializer(serializers.ModelSerializer):
     publisher_public_id = serializers.CharField(source="publisher_id.uuid")
     publisher_name = serializers.SerializerMethodField("get_publisher_name")
+    units = serializers.SerializerMethodField("get_units")
     
     class Meta:
         model = Exam
@@ -190,11 +214,16 @@ class ExamDetailsSerializer(serializers.ModelSerializer):
         elif obj.publisher_id.account_type == "team":
             name = "فريق " + obj.publisher_id.team_name
         return name
+    
+    def get_units(self, obj):
+        """Return array of unit names instead of IDs"""
+        return [unit.name for unit in obj.units.all()]
 
 
 class ExamDetailsForDashboardSerializer(serializers.ModelSerializer):
     publisher_public_id = serializers.CharField(source="publisher_id.uuid")
     publisher_name = serializers.SerializerMethodField("get_publisher_name")
+    units = serializers.SerializerMethodField("get_units")
     
     class Meta:
         model = Exam
@@ -229,6 +258,10 @@ class ExamDetailsForDashboardSerializer(serializers.ModelSerializer):
         elif obj.publisher_id.account_type == "team":
             name = "فريق " + obj.publisher_id.team_name
         return name
+    
+    def get_units(self, obj):
+        """Return array of unit names instead of IDs"""
+        return [unit.name for unit in obj.units.all()]
 
 
 class ExamListDashboardSerializer(serializers.ModelSerializer):
@@ -255,5 +288,6 @@ class ExamPreviewListSerializer(serializers.ModelSerializer):
         fields = [
             "public_id",
             "name",
+            "price",
         ]
   
