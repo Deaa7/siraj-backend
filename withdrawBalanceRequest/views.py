@@ -24,6 +24,7 @@ class make_withdraw_balance_request(APIView):
   def post(self, request):
       
     user_id = request.user.id
+     
     user = get_object_or_404(User, id=user_id)
 
     if user is None:
@@ -44,36 +45,36 @@ class make_withdraw_balance_request(APIView):
         payment_way = serializer.validated_data.get("payment_way")
         shamcash_code = serializer.validated_data.get("shamcash_code")
 
+        WithdrawBalanceRequest.objects.create(
+            user_id=user,
+            wanted_amount=amount,
+            payment_way=payment_way,
+            full_name=user.full_name,   
+            email=user.email,
+            phone=user.phone,
+            city=user.city,
+            original_balance=user.balance,
+            shamcash_code=shamcash_code,
+        )
+        
+        Transactions.objects.create(
+            user=user,
+            full_name=user.full_name,
+            amount=amount,
+            transaction_type="withdraw",
+            balance_before=user.balance,
+            balance_after=user.balance - amount,
+            transaction_status="pending",
+        )
+        
+        user.balance -= amount
+        user.save()
+
+        return Response(
+            {"message": "تم إرسال طلب سحب رصيد بنجاح"}, status=status.HTTP_200_OK
+        )
     else:
         return Response(
             {"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
         )
 
-    WithdrawBalanceRequest.objects.create(
-        user_id=user.id,
-        wanted_amount=amount,
-        payment_way=payment_way,
-        full_name=user.full_name,   
-        email=user.email,
-        phone=user.phone,
-        city=user.city,
-        original_balance=user.balance,
-        shamcash_code=shamcash_code,
-    )
-    
-    Transactions.objects.create(
-        user_id=user,
-        full_name=user.full_name,
-        amount=amount,
-        transaction_type="withdraw",
-        balance_before=user.balance,
-        balance_after=user.balance - amount,
-        transaction_status="pending",
-    )
-    
-    user.balance -= amount
-    user.save()
-
-    return Response(
-        {"message": "تم إرسال طلب سحب رصيد بنجاح"}, status=status.HTTP_200_OK
-    )

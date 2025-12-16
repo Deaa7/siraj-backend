@@ -9,7 +9,9 @@ from django.shortcuts import get_object_or_404
 
 # Create your views here.
 from .models import MCQ
-from .serializers import MCQSerializer
+from exams.models import Exam
+from .serializers import EditMCQSerializer, MCQSerializer
+
 @permission_classes([IsAuthenticated])
 @api_view(["POST"])
 def create_mcq(request):
@@ -18,6 +20,26 @@ def create_mcq(request):
         serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@permission_classes([IsAuthenticated])
+@api_view(["POST"])
+def create_mcq_by_exam_public_id(request , exam_public_id):
+    
+ 
+    exam = get_object_or_404(Exam , public_id = exam_public_id)
+ 
+    request.data['exam'] = exam.id 
+    
+    serializer = MCQSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        exam.number_of_questions +=1 
+        exam.save()
+        
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 @permission_classes([IsAuthenticated])
@@ -33,7 +55,7 @@ def get_exam_mcqs(request):
 @api_view(["PUT" , "PATCH"])
 def edit_mcq(request , mcq_public_id):
     mcq = get_object_or_404(MCQ, public_id=mcq_public_id)
-    serializer = MCQSerializer(mcq, data=request.data)
+    serializer = EditMCQSerializer(mcq, data=request.data)
     if serializer.is_valid():
         serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -44,6 +66,9 @@ def edit_mcq(request , mcq_public_id):
 @api_view(["DELETE"])
 def delete_mcq(request , mcq_public_id):
     mcq = get_object_or_404(MCQ, public_id=mcq_public_id)
+    exam = mcq.exam
+    exam.number_of_questions -= 1
+    exam.save()
     mcq.delete()
     return Response(status=status.HTTP_204_NO_CONTENT)
 

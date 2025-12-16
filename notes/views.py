@@ -16,10 +16,12 @@ from services.parameters_validator import validate_pagination_parameters
 
 from Constants import CLASSES_ARRAY , SUBJECT_NAMES_ARRAY , LEVELS_ARRAY 
 
+
 # serializers
 from .serializers import (
     NoteCardsSerializer,
     NoteCreateSerializer,
+    NoteDataForEditSerializer,
     NoteDetailsForDashboardSerializer,
     NoteDetailsSerializer,
     NoteListDashboardSerializer,
@@ -113,7 +115,7 @@ def create_note(request):
 @api_view(["PATCH", "PUT"])
 def update_note(request, note_public_id):
     try:
-        publisher_id = request.user.id
+        publisher_id = request.user
         note = get_object_or_404(Note, public_id=note_public_id)
 
         if note.publisher_id != publisher_id:
@@ -148,6 +150,16 @@ def update_note(request, note_public_id):
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
+@permission_classes([IsAuthenticated])
+@api_view(["GET"])
+def get_note_data_for_edit(request , public_id):
+        note = get_object_or_404(Note, public_id=public_id)
+        serializer = NoteDataForEditSerializer(note)
+    
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+        
 @permission_classes([IsAuthenticated])
 @api_view(["GET"])
 def get_note_details(request, note_public_id):
@@ -368,7 +380,7 @@ def get_notes_list_for_dashboard(request):
         
         count,limit= validate_pagination_parameters(request.query_params.get("count", 0), request.query_params.get("limit", 7))
 
-        notes = Note.objects.filter(publisher_id=publisher_id)
+        notes = Note.objects.filter(publisher_id=publisher_id).order_by('-created_at')
 
         if notes.count() <= 0:
             return Response(

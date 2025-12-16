@@ -36,7 +36,10 @@ def get_transactions_history_of_publisher(request):
      get transactions history for the publisher with pagination
     """
     
-    count,limit = validate_pagination_parameters(request.data.get('count', 0), request.data.get('limit', 5))
+    count,limit = validate_pagination_parameters(
+        int(request.query_params.get('count', 0)), 
+        int(request.query_params.get('limit', 10))
+    )
     
     transactions = Transactions.objects.filter(user=request.user).order_by('-created_at')
   

@@ -12,6 +12,7 @@ urlpatterns = [
     path('update-note/<str:note_public_id>/', views.update_note, name='update_note'),
     path('delete-note/<str:note_public_id>/', views.delete_note, name='delete_note'),
     path('get-notes-list-for-dashboard/', views.get_notes_list_for_dashboard, name='get_notes_list_for_dashboard'),
+    path('get-note-data-for-edit/<str:public_id>/', views.get_note_data_for_edit, name='get_note_data_for_edit'),
     path('get-note-details-for-dashboard/<str:note_public_id>/', views.get_note_details_for_dashboard, name='get_note_details_for_dashboard'),
     path('get-note-preview-list/', views.get_note_preview_list, name='get_note_preview_list'),
 

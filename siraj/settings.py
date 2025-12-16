@@ -213,8 +213,20 @@ EMAIL_FROM = f"منصة سراج التعليمية <{EMAIL_HOST_USER}>"
 AWS_BUCKET_NAME = os.getenv("AWS_BUCKET_NAME")
 AWS_REGION_NAME = os.getenv("AWS_REGION_NAME")
 AWS_ENDPOINT_URL = os.getenv("AWS_ENDPOINT_URL")
+
+
+AWS_PRIVATE_BUCKET_NAME =os.getenv("AWS_PRIVATE_BUCKET_NAME")
+AWS_PRIVATE_REGION_NAME =os.getenv("AWS_PRIVATE_REGION_NAME")
+AWS_PRIVATE_ENDPOINT_URL = os.getenv("AWS_PRIVATE_ENDPOINT_URL")
+
+AWS_PUBLIC_BUCKET_NAME = os.getenv("AWS_PUBLIC_BUCKET_NAME")
+AWS_PUBLIC_REGION_NAME = os.getenv("AWS_PUBLIC_REGION_NAME")
+AWS_PUBLIC_ENDPOINT_URL =os.getenv("AWS_PUBLIC_ENDPOINT_URL")
+
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+ 
+
 
 STORAGES = {
     "default": {
@@ -222,9 +234,9 @@ STORAGES = {
         "OPTIONS": {
             "access_key": AWS_ACCESS_KEY_ID,  # application key id
             "secret_key": AWS_SECRET_ACCESS_KEY,  # application key
-            "bucket_name": AWS_BUCKET_NAME,
-            "region_name": AWS_REGION_NAME,
-            "endpoint_url": AWS_ENDPOINT_URL,
+            "bucket_name": AWS_PRIVATE_BUCKET_NAME,
+            "region_name": AWS_PRIVATE_REGION_NAME,
+            "endpoint_url": AWS_PRIVATE_ENDPOINT_URL,
         },
     },
     "staticfiles": {
@@ -295,8 +307,8 @@ REST_FRAMEWORK = {
         "public_teacher_profile": "10/min",
         "public_team_profile": "10/min",
         "public_student_profile": "10/min",
-        "create_charging_order": "1/day",
-        "make_withdraw_balance_request": "1/day",
+        "create_charging_order": "2/day",
+        "make_withdraw_balance_request": "2/day",
         "resend_otp": "1/min",
         "verify_account": "2/min",
     },

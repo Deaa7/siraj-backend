@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import Exam
+from units.models import Unit
 from utils.security import SecurityValidator
 from django.core.exceptions import ValidationError
 from utils.validators import CommonValidators
@@ -86,6 +87,14 @@ class ExamCreateSerializer(serializers.ModelSerializer):
 
 
 class ExamUpdateSerializer(serializers.ModelSerializer):
+    # Accept units as an array of Unit.public_id strings instead of PKs
+    units = serializers.SlugRelatedField(
+        many=True,
+        slug_field="public_id",
+        queryset=Unit.objects.all(),
+        required=False,
+    )
+
     class Meta:
         model = Exam
         fields = [
@@ -125,16 +134,11 @@ class ExamUpdateSerializer(serializers.ModelSerializer):
 
     def validate_price(self, value):
         """Validate price with global security protection"""
-        if not value:
+        # Allow None or empty string (if price is optional)
+        if value is None or (isinstance(value, str) and not value.strip()):
             return value
         try:
-            if not isinstance(value, (int, float)):
-                raise serializers.ValidationError("السعر يجب ان يكون عدد صحيح")
-            if value < 0:
-                raise serializers.ValidationError("السعر يجب ان يكون اكبر من 0")
-            if value > 10000000:
-                raise serializers.ValidationError("السعر يجب ان يكون اقل من 10000000")
-            return value
+            return CommonValidators.validate_money_amount(value, "السعر")
         except ValidationError as e:
             raise serializers.ValidationError(str(e))
 
@@ -179,6 +183,28 @@ class ExamCardsSerializer(serializers.ModelSerializer):
         return name
 
 
+class ExamDetailsForEditingSerializers(serializers.ModelSerializer):
+    units = serializers.SerializerMethodField("get_units")
+    
+    class Meta:
+        model = Exam
+        fields = [
+            "public_id",
+            "name",
+            "subject_name",
+            "Class",
+            "level",
+            "number_of_questions",
+            "description",
+            "price",
+            "active",
+            "visibility",
+            "units",
+        ]
+    def get_units(self, obj):
+        """Return array of unit names instead of IDs"""
+        return [unit.public_id for unit in obj.units.all()]
+   
 class ExamDetailsSerializer(serializers.ModelSerializer):
     publisher_public_id = serializers.CharField(source="publisher_id.uuid")
     publisher_name = serializers.SerializerMethodField("get_publisher_name")

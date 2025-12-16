@@ -16,6 +16,7 @@ urlpatterns = [
     path('get-exam-details-for-dashboard/<str:exam_public_id>/', views.get_exam_details_for_dashboard, name='get_exam_details_for_dashboard'),
     path('get-exam-preview-list/', views.get_exam_preview_list, name='get_exam_preview_list'),
     path('auto-generate-exam-mcqs/', views.auto_generate_exam_mcqs, name='auto_generate_exam_mcqs'),
+    path('get-exam-details-and-mcqs-for-editing/<str:exam_public_id>/',views.get_exam_details_and_mcqs_for_editing, name ='get-exam-details-and-mcqs-for-editing'),
     #students
     path('get-exam-details/<str:exam_public_id>/', views.get_exam_details, name='get_exam_details'),
     path('get-exam-cards/', views.get_exam_cards, name='get_exam_cards'),

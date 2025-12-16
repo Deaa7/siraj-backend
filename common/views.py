@@ -4,7 +4,6 @@ from rest_framework.views import APIView
  
 from teacherProfile.models import TeacherProfile
 from teamProfile.models import TeamProfile
-from transactions.models import Transactions
 from users.models import User
 from purchaseHistory.models import PurchaseHistory
 from studentPremiumContent.models import StudentPremiumContent
@@ -1175,7 +1174,72 @@ def check_publishing_availability(request):
 
 
 
-class PresignedURLView(APIView):
+class PrivatePresignedURL(APIView):
+    permission_classes([IsAuthenticated])
+    def post(self, request):
+        """
+        Generate presigned URL for direct upload to Backblaze B2
+        """
+        file_name = request.data.get('file_name')
+        file_type = request.data.get('file_type', 'application/octet-stream')
+        file_size = request.data.get('file_size')
+      
+        # 1. Validate file type (only allow videos/PDFs for LMS)
+        allowed_types = ['video/', 'application/pdf', 'image/']
+        if not any(file_type.startswith(allowed) for allowed in allowed_types):
+            return Response({'error': 'نوع الملف غير مسموح به'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # 2. Validate file size (2GB max for videos)
+        max_size = 2 * 1024 * 1024 * 1024  # 2GB
+        if file_size > max_size:
+            return Response({'error': 'الملف كبير جدا'}, status=status.HTTP_400_BAD_REQUEST)
+        if not file_name:
+            return Response(
+                {'error': 'اسم الملف مطلوب'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Generate unique file key
+        file_extension = file_name.split('.')[-1] if '.' in file_name else 'bin'
+        unique_id = uuid.uuid4()
+        # file_key = f"uploads/{unique_id}.{file_extension}"
+
+        # Initialize Backblaze S3 client
+        s3_client = boto3.client(
+            's3',
+            endpoint_url=settings.AWS_PRIVATE_ENDPOINT_URL,  # Your Backblaze endpoint
+             region_name=settings.AWS_PRIVATE_REGION_NAME,
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,  # Your keyID
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,  # Your applicationKey
+            config=Config(signature_version='s3v4'),
+        )
+ 
+
+        try:
+            presigned_url = s3_client.generate_presigned_url(
+                 ClientMethod="put_object",
+            Params={
+                'Bucket': settings.AWS_PRIVATE_BUCKET_NAME,
+                'Key': file_name,
+                'ContentType': file_type, 
+                    'Metadata': {
+                        'expected-size': str(file_size),
+                        'file-type': file_type,
+                    }
+             
+            },
+            ExpiresIn=1800
+        )
+            return Response({'url': presigned_url})
+
+        except Exception as e:
+            return Response(
+                {'error': f'Failed to generate presigned URL: {str(e)}'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            
+
+class PublicPresignedURL(APIView):
     permission_classes([IsAuthenticated])
     def post(self, request):
         """
@@ -1199,8 +1263,8 @@ class PresignedURLView(APIView):
         # Initialize Backblaze S3 client
         s3_client = boto3.client(
             's3',
-            endpoint_url=settings.AWS_ENDPOINT_URL,  # Your Backblaze endpoint
-             region_name=settings.AWS_REGION_NAME,
+            endpoint_url=settings.AWS_PUBLIC_ENDPOINT_URL,  # Your Backblaze endpoint
+             region_name=settings.AWS_PUBLIC_REGION_NAME,
             aws_access_key_id=settings.AWS_ACCESS_KEY_ID,  # Your keyID
             aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,  # Your applicationKey
             config=Config(signature_version='s3v4'),
@@ -1212,12 +1276,15 @@ class PresignedURLView(APIView):
             presigned_url = s3_client.generate_presigned_url(
                  ClientMethod="put_object",
             Params={
-                'Bucket': settings.AWS_BUCKET_NAME,
+                'Bucket': settings.AWS_PUBLIC_BUCKET_NAME,
                 'Key': file_name,
                 'ContentType': file_type, 
-                # ContentType is CRITICAL. It must match what the frontend sends exactly.
+                    'Metadata': {
+                        'expected-size': str(file_size),
+                        'file-type': file_type,
+                    }
             },
-            ExpiresIn=3600
+            ExpiresIn=900
         )
             return Response({'url': presigned_url})
 

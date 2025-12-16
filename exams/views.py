@@ -33,6 +33,7 @@ from .serializers import (
     ExamCardsSerializer,
     ExamCreateSerializer,
     ExamDetailsForDashboardSerializer,
+    ExamDetailsForEditingSerializers,
     ExamDetailsSerializer,
     ExamListDashboardSerializer,
     ExamPreviewListSerializer,
@@ -189,12 +190,27 @@ def create_exam(request):
     except Exception as e:
         return Response( str(e), status=status.HTTP_400_BAD_REQUEST)
 
+@permission_classes([IsAuthenticated])
+@api_view(["GET"])
+def get_exam_details_and_mcqs_for_editing(request , exam_public_id) :
+    try:
+        exam = Exam.objects.select_related("publisher_id").get(public_id=exam_public_id)
+        exam_serializer = ExamDetailsForEditingSerializers(exam)
+        mcqs = MCQ.objects.filter(exam_id=exam.id).order_by('created_at')
+        mcqs_serializer = MCQSerializer(mcqs, many=True)
+        return Response(
+            {"exam": exam_serializer.data, "mcqs": mcqs_serializer.data},
+            status=status.HTTP_200_OK,
+        )
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+   
 
 @permission_classes([IsAuthenticated])
 @api_view(["PATCH", "PUT"])
 def update_exam(request, exam_public_id):
     try:
-        publisher_id = request.user.id
+        publisher_id = request.user
         exam = get_object_or_404(Exam, public_id=exam_public_id)
 
         if exam.publisher_id != publisher_id:
@@ -202,13 +218,14 @@ def update_exam(request, exam_public_id):
                 {"error": "غير مصرح لك بتحديث هذا الامتحان"},
                 status=status.HTTP_403_FORBIDDEN,
             )
-
+  
         # Pass the instance to the serializer for update
         serializer = ExamUpdateSerializer(exam, data=request.data, partial=True)
 
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+        # Save exam including many-to-many units (handled by SlugRelatedField)
         serializer.save()
 
         return Response(status=status.HTTP_200_OK)

@@ -2,6 +2,11 @@ from rest_framework import serializers
 from .models import Note
 from utils.security import SecurityValidator
 from django.core.exceptions import ValidationError
+from django.conf import settings
+import boto3
+from botocore.config import Config
+from utils.validators import CommonValidators
+
 class NoteCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Note
@@ -54,7 +59,49 @@ class NoteDetailsSerializer(serializers.ModelSerializer):
         return name
       
     
+class NoteDataForEditSerializer(serializers.ModelSerializer):
+    url = serializers.SerializerMethodField("get_presigned_url")
+    class Meta:
+        model = Note
+        fields = [
+            "name",
+            "subject_name",
+            "Class",
+            "level",
+            "visibility",
+             "description",
+            "url" ,
+            "price",
+            "content",
+        ]
+        
+    def get_presigned_url(self, obj):
+        
+          s3_client = boto3.client(
+            's3',
+            endpoint_url=settings.AWS_PRIVATE_ENDPOINT_URL,  # Your Backblaze endpoint
+             region_name=settings.AWS_PRIVATE_REGION_NAME,
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,  # Your keyID
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,  # Your applicationKey
+            config=Config(signature_version='s3v4'),
+        )
+ 
+
     
+          presigned_url = s3_client.generate_presigned_url(
+                 ClientMethod="get_object",
+            Params={
+                'Bucket': settings.AWS_PRIVATE_BUCKET_NAME,
+                 'Key': obj.content,
+                'ResponseContentType': 'application/pdf',
+            },
+            ExpiresIn=3600
+        )
+          
+          return presigned_url
+      
+    
+
 class NoteListDashboardSerializer(serializers.ModelSerializer):
     class Meta:
         model = Note
@@ -139,18 +186,7 @@ class NoteUpdateSerializer(serializers.ModelSerializer):
 
     def validate_price(self, value):
         """Validate price with global security protection"""
-        if not value:
-            return value
-        try:
-            if not isinstance(value, (int, float)):
-                raise serializers.ValidationError("السعر يجب ان يكون رقم صحيح")
-            if value < 0:
-                raise serializers.ValidationError("السعر يجب ان يكون اكبر من 0")
-            if value > 1000000:
-                raise serializers.ValidationError("السعر يجب ان يكون اقل من 1000000")
-            return value
-        except ValidationError as e:
-            raise serializers.ValidationError(str(e))
+        return CommonValidators.validate_money_amount(value)
 
     def validate_visibility(self, value):
         """Validate visibility with global security protection"""

@@ -106,7 +106,7 @@ def _edit_balance_and_record_plan_purchase(user_id , offer_id , offer_price):
     full_name=user.full_name,
     transaction_type="subscription",
     transaction_status="completed",
-    amount=-(offer_price),
+    amount=offer_price,
     balance_before=user.balance,
     balance_after=user.balance - offer_price,
    )

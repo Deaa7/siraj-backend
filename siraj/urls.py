@@ -50,7 +50,7 @@ urlpatterns = [
     path('api/charging-orders/', include('chargingOrders.urls')),
     path('api/transactions/', include('transactions.urls')),
     path('api/purchase-history/', include('purchaseHistory.urls')),
-    path('api/withdraw-balance-request/', include('withdrawBalanceRequest.urls')),
+    path('api/withdraw-balance/', include('withdrawBalanceRequest.urls')),
     path('api/discount-codes/', include('discountCodes.urls')),
     
     #students

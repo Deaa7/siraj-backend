@@ -170,10 +170,10 @@ def get_b2_client():
     """Create a direct boto3 client for Backblaze B2"""
     return boto3.client(
         's3',
-        endpoint_url=settings.AWS_ENDPOINT_URL,
+        endpoint_url=settings.AWS_PRIVATE_ENDPOINT_URL,
         aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
         aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-        region_name=settings.AWS_REGION_NAME
+        region_name=settings.AWS_PRIVATE_REGION_NAME
     )
 
 def download_file_from_b2(file_path):
@@ -185,7 +185,7 @@ def download_file_from_b2(file_path):
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_file:
             # Download file from B2
             client.download_fileobj(
-                settings.AWS_BUCKET_NAME,
+                settings.AWS_PRIVATE_BUCKET_NAME,
                 file_path,
                 temp_file
             )
@@ -202,7 +202,7 @@ def file_exists_in_b2(file_path):
     
     try:
         client.head_object(
-            Bucket=settings.AWS_BUCKET_NAME,
+            Bucket=settings.AWS_PRIVATE_BUCKET_NAME,
             Key=file_path
         )
         return True
@@ -239,7 +239,7 @@ def getting_file(file_path):
         try:
             with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
                 client.download_fileobj(
-                    settings.AWS_BUCKET_NAME,
+                    settings.AWS_PRIVATE_BUCKET_NAME,
                     key,
                     temp_file,
                 )

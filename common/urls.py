@@ -25,5 +25,6 @@ urlpatterns = [
     path('publisher-statistics/', views.publisher_statistics, name='publisher-statistics'),
     path('check-publishing-availability/', views.check_publishing_availability, name='check-publishing-availability'),
    
-     path('create-presigned-url/', views.PresignedURLView.as_view(), name='create-presigned-url'),
+     path('create-private-presigned-url/', views.PrivatePresignedURL.as_view(), name='create-private-presigned-url'),
+     path('create-public-presigned-url/', views.PublicPresignedURL.as_view(), name='create-public-presigned-url'),
 ]
