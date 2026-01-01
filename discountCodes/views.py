@@ -2,8 +2,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import permission_classes, api_view
 from rest_framework.response import Response
 from rest_framework import status
-
 from django.shortcuts import get_object_or_404
+
 
 from services.parameters_validator import validate_pagination_parameters
 from utils.validators import CommonValidators
@@ -37,10 +37,17 @@ def create_discount_code(request):
         content_public_id = request.data.get("content_public_id")
         discount_for = request.data.get("discount_for")
         discount_code = request.data.get("discount_code")
-        
+        print('discount_code ' , discount_code);
+        print('discount_for ' , discount_for);
+        print('content_public_id ' , content_public_id);
+        print('###################################')
+    
+    
+
         discount_code = CommonValidators.validate_text_field(discount_code, "discount_code")
         
         if discount_for not in ["exam", "note", "course" , "offer"]:
+            print('we get here ' , discount_for);
             return Response(
                 {"error": "نوع الخصم غير صحيح. "},
                 status=status.HTTP_400_BAD_REQUEST
@@ -81,11 +88,6 @@ def create_discount_code(request):
                     status=status.HTTP_403_FORBIDDEN
                 )
  
-            return Response(
-                {"error": "نوع الخصم غير صحيح. "},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
         # Prepare data for serializer
         data = request.data.copy()  
         data["publisher_id"] = publisher_id

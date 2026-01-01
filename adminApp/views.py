@@ -8,6 +8,10 @@ from datetime import datetime
 from dotenv import load_dotenv
 import os
 from django.utils import timezone
+from datetime import datetime, timedelta, date
+from django.db.models import Count, Sum
+from django.db.models.functions import TruncDate
+
 #models 
 from withdrawBalanceRequest.models import WithdrawBalanceRequest
 from users.models import User
@@ -19,13 +23,14 @@ from notes.models import Note
 from courses.models import Course
 from teacherProfile.models import TeacherProfile
 from teamProfile.models import TeamProfile
+from purchaseHistory.models import PurchaseHistory
+from servicePurchaseHistory.models import ServicePurchaseHistory
 
 #serializers
 from withdrawBalanceRequest.serializers import  WithdrawBalanceRequestSerializer
 from chargingOrders.serializers import GetChargingOrdersSerializer
-
-# tasks 
-from chargingOrders.tasks import charging_order_success_email_notification
+from servicePurchaseHistory.serializers import ServicePurchaseHistorySerializer
+from purchaseHistory.serializers import AdminPurchaseHistorySerializer
 
 load_dotenv()
 
@@ -36,9 +41,10 @@ this file holds endpoints that only admin can access
 """
 
 
+
 @permission_classes([IsAuthenticated])
 @api_view(["POST"])
-def ban_user(request, user_uuid):
+def block_user(request, user_uuid):
     """
     Ban a user
     """
@@ -58,7 +64,7 @@ def ban_user(request, user_uuid):
 
 @permission_classes([IsAuthenticated])
 @api_view(["POST"])
-def unban_user(request, user_uuid):
+def unblock_user(request, user_uuid):
     """
     Unban a user
     """
@@ -122,7 +128,6 @@ def  block_content(request , content_public_id):
    except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-
 @permission_classes([IsAuthenticated])
 @api_view(["POST"])
 def unblock_content(request , content_public_id):
@@ -174,40 +179,40 @@ def get_withdraw_balance_requests(request):
 
     user_id = request.user.id
     user = User.objects.get(id = user_id)
-
-    limit = request.data.get("limit", 10)
-    count = request.data.get("count", 0)
-    limit = int(limit)
-    count = int(count)
-  
-    if user.role != "admin":
+    if not user or user.account_type != "admin":
         return Response(
             {"error": "لا تملك صلاحية لعرض هذا الطلب"}, status=status.HTTP_403_FORBIDDEN
         )
 
-    withdraw_balance_request = WithdrawBalanceRequest.objects.filter(confirmed=False)
+    limit = request.query_params.get("limit", 10)
+    count = request.query_params.get("count", 0)
+ 
+    limit = int(limit)
+    count = int(count)
+  
+
+    withdraw_balance_request = WithdrawBalanceRequest.objects.filter(confirmed=False).order_by('-created_at')
 
     begin = count * limit
     end = (count + 1) * limit
-    
-    if end > len(serializer.data):
-        end = len(serializer.data)
+    length = len(withdraw_balance_request)
+    if end > length:
+        end = length
 
-    if begin > len(serializer.data):
-        begin = len(serializer.data)
-    
+    if begin > length:
+        begin = length
+ 
     serializer = WithdrawBalanceRequestSerializer(withdraw_balance_request[begin : end], many=True)
 
     data = serializer.data
 
     return Response(
-        {"withdraw_request": data, "total_number": len(serializer.data)}, status=status.HTTP_200_OK
+        {"withdraw_request": data, "total_number": length}, status=status.HTTP_200_OK
     )
-
 
 @permission_classes([IsAuthenticated])
 @api_view(["PATCH"])
-def confirm_withdraw_balance_request(request, request_id):
+def confirm_withdraw_balance_request(request, request_public_id):
 
     user_id = request.user.id
     user = User.objects.get(id = user_id)
@@ -217,21 +222,80 @@ def confirm_withdraw_balance_request(request, request_id):
             status=status.HTTP_403_FORBIDDEN,
         )
 
-    withdraw_balance_request = get_object_or_404(WithdrawBalanceRequest, id=request_id)
+    withdraw_balance_request = get_object_or_404(WithdrawBalanceRequest, public_id=request_public_id)
     withdraw_balance_request.confirmed = True
     withdraw_balance_request.confirmation_date_time = datetime.now()
-    withdraw_balance_request.save()
     
-    transaction = Transactions.objects.filter(user_id=user.id, transaction_type="withdraw" , transaction_status="pending").first()
+    transaction = Transactions.objects.filter(user_id=withdraw_balance_request.user_id, transaction_type="withdraw" , transaction_status="pending").first()
    
     if transaction is None:
         return Response({"error": "لا يوجد سجل لهذه المعاملة"}, status=status.HTTP_404_NOT_FOUND)
     
     transaction.transaction_status = "completed"
+    withdraw_balance_request.save()
     transaction.save()
+    payment_arabic_way = ""
+    if withdraw_balance_request.payment_way == "shamcash": 
+        payment_arabic_way = "محفظة شام كاش"
+    if withdraw_balance_request.payment_way == "syriatel": 
+        payment_arabic_way = "سيرياتيل كاش"      
+    if withdraw_balance_request.payment_way == "fauad": 
+        payment_arabic_way = "الفؤاد"  
+    if withdraw_balance_request.payment_way == "haram": 
+     payment_arabic_way = "الهرم"         
+    Notifications.objects.create(
+        receiver_id=withdraw_balance_request.user_id,
+        source_type="management",
+        source_id = "0",
+        title="طلب سحب رصيد",
+        content=f"تم إتمام طلب سحب الرصيد الخاص بك وتحويل مبلغ {int(withdraw_balance_request.wanted_amount):,} ل.س باستخدام {payment_arabic_way}"
+    )
+    
+    # withdraw_balance_request_notification.delay(withdraw_balance_request.user_id.id, withdraw_balance_request.wanted_amount, withdraw_balance_request.payment_way)
     return Response({"message": "تم تأكيد الطلب بنجاح"}, status=status.HTTP_200_OK)
 
+@permission_classes([IsAuthenticated])
+@api_view(["PATCH"])
+def reject_withdraw_balance_request(request, request_public_id):
+
+    user_id = request.user.id
+    reason = request.data.get("reason")
+    user = User.objects.get(id = user_id)
  
+    if not user or user.account_type != "admin":
+        return Response(
+            {"error": "لا تملك صلاحية لعرض هذا الطلب"}, status=status.HTTP_403_FORBIDDEN
+        )
+
+    withdraw_balance_request = get_object_or_404(WithdrawBalanceRequest, public_id=request_public_id)
+ 
+    
+    transaction = Transactions.objects.filter(user_id=withdraw_balance_request.user_id, transaction_type="withdraw" , transaction_status="pending" , amount = withdraw_balance_request.wanted_amount).first()
+   
+    if transaction is None:
+        return Response({"error": "لا يوجد سجل لهذه المعاملة"}, status=status.HTTP_404_NOT_FOUND)
+    
+    user = User.objects.get(id=withdraw_balance_request.user_id.id)
+    user.balance += withdraw_balance_request.wanted_amount
+    user.save()
+    
+    # delete the transaction history of the user balance 
+    
+    
+    withdraw_balance_request.delete()
+    transaction.delete()
+       
+    Notifications.objects.create(
+        receiver_id=withdraw_balance_request.user_id,
+        source_type="management",
+        source_id = "0",
+        title="رفض طلب سحب رصيد",
+        content=reason
+    )
+    
+    # withdraw_balance_request_notification.delay(withdraw_balance_request.user_id.id, withdraw_balance_request.wanted_amount, withdraw_balance_request.payment_way)
+    return Response({"message": "تم تأكيد الطلب بنجاح"}, status=status.HTTP_200_OK)
+
 @permission_classes([IsAuthenticated])
 @api_view(["POST"])
 def change_user_balance(request, user_uuid):  # increasing bonus
@@ -345,18 +409,23 @@ def change_user_balance(request, user_uuid):  # increasing bonus
 
     return Response({"message": "تم تغيير الرصيد بنجاح"}, status=status.HTTP_200_OK)
 
-
 @permission_classes([IsAuthenticated])
 @api_view(["GET"])
 def get_charging_orders(request):
     """
     Get all charging orders
     """
-
-    limit = request.data.get("limit", 10)
-    count = request.data.get("count", 0)
+    user_id = request.user.id
+    user = User.objects.get(id=user_id)
+    if not user or user.account_type != "admin":
+        return Response(
+            {"error": "لا تملك صلاحية لعرض هذا الطلب"}, status=status.HTTP_403_FORBIDDEN
+        )
     
-    charging_orders = ChargingOrders.objects.select_related("user").filter(status="pending")
+    limit = request.query_params.get("limit", 10)
+    count = request.query_params.get("count", 0)
+    
+    charging_orders = ChargingOrders.objects.select_related("user").filter(status="pending").order_by('-created_at')
 
     count = int(count)
     limit = int(limit)
@@ -367,10 +436,9 @@ def get_charging_orders(request):
     serializer = GetChargingOrdersSerializer(charging_orders[begin:end], many=True)
 
     return Response(
-        {"message": "تم إحضار الطلبات بنجاح", "charging_orders": serializer.data, "total_number": len(serializer.data)},
+        {"charging_orders": serializer.data, "total_number": len(serializer.data)},
         status=status.HTTP_200_OK,
     )
-
 
 @permission_classes([IsAuthenticated])
 @api_view(["POST"])
@@ -382,7 +450,7 @@ def validate_charging_order(request, order_public_id):
     user = request.user
     user = get_object_or_404(User, id=user.id)
 
-    if user.account_type != "admin":
+    if not user or user.account_type != "admin":
         return Response(
             {"error": "لا تملك صلاحية لتأكيد هذا الطلب"},
             status=status.HTTP_403_FORBIDDEN,
@@ -400,20 +468,29 @@ def validate_charging_order(request, order_public_id):
 
         charging_order.save()
 
-        transaction =Transactions.objects.create(
+        Transactions.objects.create(
             user=user,
             amount=amount,
-            full_name=charging_order.full_name,
+            full_name=user.full_name,
             transaction_type="charging",
             transaction_status="completed",
             balance_before=user.balance,
             balance_after=user.balance + amount,
         )
         
+        
         user.balance += amount
         user.save()
         
-        charging_order_success_email_notification.delay(user.email , user.full_name , amount , transaction.public_id )
+        Notifications.objects.create(
+        receiver_id=charging_order.user,
+        source_type="management",
+        source_id = "0",
+        title="تأكيد طلب شحن الرصيد",
+        content=f"تم شحن رصيدك بمبلغ {int(amount):,} ل.س بنجاح"
+    )
+    
+        # charging_order_success_email_notification.delay(user.email , user.full_name , amount , transaction.public_id )
         
         return Response({"message": "تم تأكيد الطلب بنجاح"}, status=status.HTTP_200_OK)
     else:
@@ -421,24 +498,23 @@ def validate_charging_order(request, order_public_id):
             {"message": "حدث خطأ أثناء تأكيد الطلب"}, status=status.HTTP_400_BAD_REQUEST
         )
 
-
 @permission_classes([IsAuthenticated])
 @api_view(["POST"])
-def cancel_charging_order(request, order_id):
+def cancel_charging_order(request, order_public_id):
     """
     Cancel a charging order
     """
     user = request.user
     user = get_object_or_404(User, id=user.id)
 
-    if user.account_type != "admin":
+    if not user or user.account_type != "admin":
         return Response(
-            {"error": "لا تملك صلاحية لتأكيد هذا الطلب"},
+            {"error": "لا تملك صلاحية لإلغاء هذا الطلب"},
             status=status.HTTP_403_FORBIDDEN,
         )
     reason = request.data.get("reason")
 
-    charging_order = get_object_or_404(ChargingOrders, id=order_id)
+    charging_order = get_object_or_404(ChargingOrders, public_id=order_public_id)
     
     if charging_order.status != "pending":
         return Response(
@@ -452,10 +528,10 @@ def cancel_charging_order(request, order_id):
 
         Notifications.objects.create(
             receiver_id=charging_order.user,
-            source_type="charging_order",
-            title=f"إلغاء طلب شحن الرصيد",
+            source_type="management",
+            source_id = "0",
+            title="إلغاء طلب شحن الرصيد",
             content=reason,
-            date_time=timezone.now(),
         )
 
         return Response({"message": "تم إلغاء الطلب بنجاح"}, status=status.HTTP_200_OK)
@@ -464,6 +540,155 @@ def cancel_charging_order(request, order_id):
             {"message": f"حدث خطأ أثناء إلغاء الطلب: {e}"},
             status=status.HTTP_400_BAD_REQUEST,
         )
+
+@permission_classes([IsAuthenticated])
+@api_view(["GET"])
+def get_platform_balance(request) : 
+    
+    user = request.user
+    user = get_object_or_404(User, id=user.id)
+    
+    if not user or user.account_type != "admin":
+        return Response(
+            {"error": "لا تملك صلاحية لعرض الرصيد المتاح للمنصة"}, status=status.HTTP_403_FORBIDDEN
+        )
+        
+    owner_id = os.getenv("OWNER_ID")
+    owner = User.objects.get(id=owner_id)
+    return Response({"balance": owner.balance}, status=status.HTTP_200_OK)
+
+@permission_classes([IsAuthenticated])
+@api_view(["GET"])
+def get_platform_profits_analysis_last_month(request):
+  
+   user = request.user 
+   user = get_object_or_404(User, id = user.id)
+   if not user or user.account_type != "admin":
+        return Response(
+            {"error": "لا تملك صلاحية لعرض الأرباح الشهرية للمنصة"}, status=status.HTTP_403_FORBIDDEN
+        )
+  
+   try:
+    current_time = timezone.now()
+    start_date = current_time - timedelta(days=30)
+   
+    # Generate all dates in the range [current_date - 30 days, current_date]
+    current_date = timezone.localtime(current_time).date()
+    start_date_only = start_date.date() if isinstance(start_date, datetime) else start_date
+    
+    # Initialize date_stats with all dates in the range, set to 0
+    date_stats = {}
+    for i in range(31):  # 30 days + current day = 31 days
+        date_key = (start_date_only + timedelta(days=i)).isoformat()
+        date_stats[date_key] = {
+            "date": date_key,
+            "number_of_purchases": 0,
+            "profit" : 0,
+        }
+    
+         # Get actual purchase data
+    daily_summary = (
+            PurchaseHistory.objects.filter(
+                purchase_date__gte=start_date,
+            )
+            .annotate(date_truncated=TruncDate("purchase_date"))
+            .values("date_truncated")
+            .annotate(
+                number_of_purchases=Count("id"),
+                profit=Sum("owner_profit"),
+            )
+        )
+    
+            # Update date_stats with actual data
+    for entry in daily_summary:
+            purchase_date = entry["date_truncated"]
+            if purchase_date is None:
+                continue
+
+            date_key = purchase_date.isoformat()
+            if date_key in date_stats:
+                date_stats[date_key]["number_of_purchases"] = entry["number_of_purchases"]
+                date_stats[date_key]["profit"] = entry["profit"]
+
+    # Convert to list and sort by date (newest first)
+    results = sorted(
+        date_stats.values(), key=lambda item: item["date"] 
+    )
+
+    return Response({"platform_profits_last_month": results}, status=status.HTTP_200_OK)
+   except Exception as exc:
+        return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+@permission_classes([IsAuthenticated])
+@api_view(["GET"])
+def get_service_purchases_list(request):
+    user = request.user
+    user = get_object_or_404(User, id=user.id)
+    if not user or user.account_type != "admin":
+        return Response(
+            {"error": "لا تملك صلاحية لعرض قائمة الشراء الخاص بالخدمات"}, status=status.HTTP_403_FORBIDDEN
+        )
+    limit = request.query_params.get("limit", 10)
+    count = request.query_params.get("count", 0)
+    limit = int(limit)
+    count = int(count)
+    service_purchases = ServicePurchaseHistory.objects.all().order_by('-created_at')
+    total_number = service_purchases.count()
+    begin = count * limit
+    end = (count + 1) * limit
+    if begin > total_number:
+        begin = total_number 
+    if end > total_number:
+        end = total_number
+ 
+    serializer = ServicePurchaseHistorySerializer(service_purchases[begin:end], many=True)
+    return Response({"service_purchases": serializer.data, "total_number": total_number}, status=status.HTTP_200_OK)
+
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_content_purchases_list(request):
+    
+    """
+    Return paginated content purchases list.
+    """
+    user = request.user
+    user = get_object_or_404(User, id=user.id)
+    if not user or user.account_type != "admin":
+        return Response(
+            {"error": "لا تملك صلاحية لعرض قائمة الشراء الخاص بالخدمات"}, status=status.HTTP_403_FORBIDDEN
+        )    
+    try:
+        limit = request.query_params.get("limit", 10)
+        count = request.query_params.get("count", 0)
+        limit = int(limit)
+        count = int(count)
+        content_purchases = PurchaseHistory.objects.all().order_by('-created_at')
+        total_number = content_purchases.count()
+
+        begin = count * limit
+        end = (count + 1) * limit
+
+        if begin > total_number:
+            begin = total_number
+        if end > total_number:
+            end = total_number
+
+        serializer = AdminPurchaseHistorySerializer(
+            content_purchases[begin:end], many=True
+        )
+ 
+
+        return Response(
+            {
+                "history": serializer.data,
+                "total_number": total_number,
+            },
+            status=status.HTTP_200_OK,
+        )
+    except Exception as exc:
+        return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 

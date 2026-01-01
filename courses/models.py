@@ -11,7 +11,7 @@ class Course(PublicModel):
     Class = models.CharField(max_length= 6, choices=CLASSES ,default='12')
     publisher_id = models.ForeignKey(User, on_delete=models.DO_NOTHING, related_name='courses_publisher')
     what_you_will_learn = models.TextField(max_length= 6000, default='')
-    description = models.TextField(max_length= 1000, default='', blank=True)
+    description = models.TextField(max_length= 1000, default='', blank=True, null=True)
     price = models.DecimalField(max_digits=10, decimal_places=2,default=0 , blank=True , validators=[MinValueValidator(0)])
     level = models.CharField(max_length= 20, default='سهل',  choices=LEVELS)
     number_of_enrollments = models.IntegerField(default=0, blank=True, validators=[MinValueValidator(0)])
@@ -22,7 +22,7 @@ class Course(PublicModel):
     active = models.BooleanField(default=True , blank=True )
     disable_date = models.DateTimeField(null=True, blank=True)
     disabled_by = models.CharField(max_length=50 ,default='' , blank = True , null = True)#publisher, admin
-    course_image = models.CharField(max_length= 300, default='' , blank = True)
+    course_image = models.CharField(max_length= 300, default='' , blank = True , null = True)
     estimated_time = models.IntegerField(default=0, blank=True)
     profit_amount = models.DecimalField(max_digits=10, decimal_places=2,default=0 , blank=True , validators=[MinValueValidator(0)])
     

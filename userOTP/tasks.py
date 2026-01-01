@@ -3,7 +3,7 @@ from django.core.mail import EmailMessage
 from django.conf import settings
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
-
+from premailer import transform
 
 
 @shared_task(bind=True)
@@ -39,13 +39,14 @@ def send_otp_email(
         # عرض محتوى HTML
         html_content = render_to_string(template_name, context)
         
+        final_html = transform(html_content)
         
         # text_content = strip_tags(html_content)  # إزالة الوسوم للإصدار النصي العادي
         
         # Create email message
         email = EmailMessage(
             subject=subject,
-            body=html_content,
+            body=final_html,
             # subject='Test',
             # body='<h1>Test HTML</h1>',
             from_email=settings.DEFAULT_FROM_EMAIL,

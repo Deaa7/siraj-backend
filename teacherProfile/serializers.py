@@ -103,7 +103,7 @@ class TeacherProfileUpdateSerializer(serializers.Serializer):
 
         try:
             return SecurityValidator.validate_input(
-                value, "الجامعة", check_sql_injection=True, check_xss=False
+                value,"الجامعة" 
             )
         except ValidationError as e:
             raise serializers.ValidationError(str(e))
@@ -115,7 +115,7 @@ class TeacherProfileUpdateSerializer(serializers.Serializer):
 
         try:
             return SecurityValidator.validate_input(
-                value, "العنوان", check_sql_injection=True, check_xss=False
+                value,"العنوان" 
             )
         except ValidationError as e:
             raise serializers.ValidationError(str(e))
@@ -127,7 +127,7 @@ class TeacherProfileUpdateSerializer(serializers.Serializer):
 
         try:
             return SecurityValidator.validate_input(
-                value, "النبذة الشخصية", check_sql_injection=True, check_xss=False
+                value,  "النبذة الشخصية" 
             )
         except ValidationError as e:
             raise serializers.ValidationError(str(e))

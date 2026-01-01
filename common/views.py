@@ -1,7 +1,9 @@
 
-#models : 
 from rest_framework.views import APIView
- 
+from rest_framework.throttling import ScopedRateThrottle
+
+#models : 
+from tempUploads.models import TempUpload
 from teacherProfile.models import TeacherProfile
 from teamProfile.models import TeamProfile
 from users.models import User
@@ -16,6 +18,7 @@ from courseStatusTracking.models import CourseStatusTracking
 from examAppTracking.models import ExamAppTracking
 from noteReadTracking.models import NoteReadTracking
 from publisherPlans.models import PublisherPlans 
+
 #services : 
 from services.notification_management import disable_content_by_admin_notification
 from services.transaction_manager import record_transaction
@@ -28,6 +31,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
+
 #others
 from django.conf import settings
 import boto3
@@ -870,7 +874,7 @@ def activate_exam(request , exam_public_id):
     exam = get_object_or_404(Exam, public_id=exam_public_id)
    
     if exam.active:
-        return Response({"error": "الامتحان مفعل بالفعل"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response("الامتحان مفعل بالفعل", status=status.HTTP_400_BAD_REQUEST)
    
     publisher = None
    
@@ -882,10 +886,10 @@ def activate_exam(request , exam_public_id):
     currentPublisherPlan = PublisherPlans.objects.get(user=publisher.user_id)
     
     if  exam.disabled_by == "admin"  and activated_by != "admin": 
-        return Response({"error": "لا يمكنك تفعيل الامتحان لانه تم تعطيله من قبل إدارة المنصة"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response("لا يمكنك تفعيل الامتحان لانه تم تعطيله من قبل إدارة المنصة", status=status.HTTP_400_BAD_REQUEST)
     
     if publisher.number_of_exams + 1 > currentPublisherPlan.offer.number_of_exams:
-        return Response({"error": "تم تجاوز الحد المسموح به للاختبارات"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response("تم تجاوز الحد المسموح به للاختبارات", status=status.HTTP_400_BAD_REQUEST)
    
     exam.active = True
     exam.save()
@@ -954,10 +958,10 @@ def activate_note(request , note_public_id):
     note = get_object_or_404(Note, public_id=note_public_id)
 
     if note.active:
-        return Response({"error": "النوطة مفعلة بالفعل"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response("النوطة مفعلة بالفعل", status=status.HTTP_400_BAD_REQUEST)
 
     if note.disabled_by == "admin"  and activated_by != "admin": 
-        return Response({"error": "لا يمكنك تفعيل النوطة لانه تم تعطيلها من قبل إدارة المنصة"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response("لا يمكنك تفعيل النوطة لانه تم تعطيلها من قبل إدارة المنصة", status=status.HTTP_400_BAD_REQUEST)
 
     publisher = None
 
@@ -969,7 +973,7 @@ def activate_note(request , note_public_id):
     currentPublisherPlan = PublisherPlans.objects.get(user=publisher.user_id)
     
     if publisher.number_of_notes + 1 > currentPublisherPlan.offer.number_of_notes:
-        return Response({"error": "تم تجاوز الحد المسموح به للنوطات"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response("تم تجاوز الحد المسموح به للنوطات", status=status.HTTP_400_BAD_REQUEST)
 
     note.active = True
     note.save()
@@ -977,12 +981,10 @@ def activate_note(request , note_public_id):
     publisher.number_of_notes += 1
     publisher.save()
     
-    return Response({"message": "تم تفعيل النوطة بنجاح"},status=status.HTTP_200_OK)
+    return Response("تم تفعيل النوطة بنجاح",status=status.HTTP_200_OK)
    except Exception as e:
-        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(str(e), status=status.HTTP_400_BAD_REQUEST)
 
-
-   
 @permission_classes([IsAuthenticated])
 @api_view(["PATCH"])
 def disable_course(request , course_public_id):
@@ -1021,8 +1023,7 @@ def disable_course(request , course_public_id):
 
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        
-    
+
     
 @permission_classes([IsAuthenticated])
 @api_view(["PATCH"])
@@ -1036,10 +1037,10 @@ def activate_course(request , course_public_id):
     course = get_object_or_404(Course, public_id=course_public_id)
     
     if course.active:
-        return Response({"error": "الدورة مفعلة بالفعل"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response("الدورة مفعلة بالفعل", status=status.HTTP_400_BAD_REQUEST)
     
     if course.disabled_by == "admin"  and activated_by != "admin": 
-        return Response({"error": "لا يمكنك تفعيل الدورة لانه تم تعطيلها من قبل إدارة المنصة"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response("لا يمكنك تفعيل الدورة لانه تم تعطيلها من قبل إدارة المنصة", status=status.HTTP_400_BAD_REQUEST)
     
     publisher = None
     
@@ -1051,7 +1052,7 @@ def activate_course(request , course_public_id):
     currentPublisherPlan = PublisherPlans.objects.get(user=publisher.user_id)
     
     if publisher.number_of_courses + 1 > currentPublisherPlan.offer.number_of_courses:
-        return Response({"error": "تم تجاوز الحد المسموح به للدورات"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response("تم تجاوز الحد المسموح به للدورات", status=status.HTTP_400_BAD_REQUEST)
     
     course.active = True
     course.save()
@@ -1059,9 +1060,9 @@ def activate_course(request , course_public_id):
     publisher.number_of_courses += 1
     publisher.save()
     
-    return Response({"message": "تم تفعيل الدورة بنجاح"},status=status.HTTP_200_OK)
+    return Response("تم تفعيل الدورة بنجاح",status=status.HTTP_200_OK)
    except Exception as e:
-        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(str(e), status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(["GET"])
@@ -1176,6 +1177,8 @@ def check_publishing_availability(request):
 
 class PrivatePresignedURL(APIView):
     permission_classes([IsAuthenticated])
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "private_presigned_url"
     def post(self, request):
         """
         Generate presigned URL for direct upload to Backblaze B2
@@ -1193,6 +1196,10 @@ class PrivatePresignedURL(APIView):
         max_size = 2 * 1024 * 1024 * 1024  # 2GB
         if file_size > max_size:
             return Response({'error': 'الملف كبير جدا'}, status=status.HTTP_400_BAD_REQUEST)
+       
+        if file_type.startswith('application/pdf') and file_size > 400 * 1024 * 1024:
+            return Response({'error': 'الملف يجب أن يكون أقل من 400MB'}, status=status.HTTP_400_BAD_REQUEST)
+      
         if not file_name:
             return Response(
                 {'error': 'اسم الملف مطلوب'}, 
@@ -1230,6 +1237,10 @@ class PrivatePresignedURL(APIView):
             },
             ExpiresIn=1800
         )
+            # if the file is a video , then create a tempUpload record
+            if file_type.startswith('video/'):
+                TempUpload.objects.create(name=file_name, expiration_date=timezone.now() + timedelta(hours=1))
+                
             return Response({'url': presigned_url})
 
         except Exception as e:
@@ -1241,6 +1252,8 @@ class PrivatePresignedURL(APIView):
 
 class PublicPresignedURL(APIView):
     permission_classes([IsAuthenticated])
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "public_presigned_url"
     def post(self, request):
         """
         Generate presigned URL for direct upload to Backblaze B2
@@ -1272,7 +1285,6 @@ class PublicPresignedURL(APIView):
  
 
         try:
-    
             presigned_url = s3_client.generate_presigned_url(
                  ClientMethod="put_object",
             Params={

@@ -43,7 +43,6 @@ class NoteDetailsSerializer(serializers.ModelSerializer):
             "file_size",
             "number_of_downloads",
             "number_of_comments",
-            # "number_of_reads",
             "price",
             "created_at",
             "updated_at",
@@ -167,7 +166,7 @@ class NoteUpdateSerializer(serializers.ModelSerializer):
 
         try:
             return SecurityValidator.validate_input(
-                value, "اسم النوطة", check_sql_injection=True, check_xss=False
+                value, "اسم النوطة",
             )
         except ValidationError as e:
             raise serializers.ValidationError(str(e))
@@ -179,7 +178,7 @@ class NoteUpdateSerializer(serializers.ModelSerializer):
 
         try:
             return SecurityValidator.validate_input(
-                value, "وصف النوطة", check_sql_injection=True, check_xss=False
+                value, "وصف النوطة",
             )
         except ValidationError as e:
             raise serializers.ValidationError(str(e))

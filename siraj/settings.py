@@ -32,6 +32,7 @@ DEBUG = True
 ALLOWED_HOSTS = [  
      "localhost",
     "127.0.0.1",
+    "192.168.10.130",
     "siraj-frontend.vercel.app",
     ]   
 
@@ -39,10 +40,18 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  # Your Vite development server origin
     "http://127.0.0.1:5173",  # Optional: if you also use the IP address
     
+    "http://localhost:5174",  # Your Vite development server origin
+    "http://127.0.0.1:5174",  # Optional: if you also use the IP address
+    
+    
     "http://localhost:8000",
     "http://127.0.0.1:8000",
     "https://siraj-frontend.vercel.app",
-    
+
+    "http://192.168.10.130:8000",  
+    "http://192.168.10.130:8081",
+    "http://localhost:8081",
+      
     "http://localhost:3000",  # Default React port
     "http://127.0.0.1:3000",
     
@@ -66,8 +75,15 @@ CORS_ALLOW_HEADERS = [
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
+    
     "http://localhost:8000",
     "http://127.0.0.1:8000",
+    "http://localhost:8081",
+    "http://192.168.10.130:8081",
+    "http://192.168.10.130:8000",
     "https://siraj-frontend.vercel.app",
 ]
 
@@ -138,12 +154,12 @@ INSTALLED_APPS = [
     "followers",
     "servicePurchaseHistory",
     "units",
-    
+    "tempUploads",
     # "telegramBot",
 ]
 
 MIDDLEWARE = [
-        "corsheaders.middleware.CorsMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -158,7 +174,7 @@ ROOT_URLCONF = 'siraj.urls'
 
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
 
-SITE_NAME = "سراج التعليمية"
+SITE_NAME = "منصة سراج التعليمية"
 SITE_URL = "https://siraj.sy"
 SUPPORT_EMAIL = "support@siraj.sy"
 
@@ -308,9 +324,11 @@ REST_FRAMEWORK = {
         "public_team_profile": "10/min",
         "public_student_profile": "10/min",
         "create_charging_order": "2/day",
-        "make_withdraw_balance_request": "2/day",
-        "resend_otp": "1/min",
+        "make_withdraw_balance_request": "255/day",
+        "resend_otp": "15/min",
         "verify_account": "2/min",
+        "private_presigned_url" : "5/min",
+        "public_presigned_url" : "100/min",
     },
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",

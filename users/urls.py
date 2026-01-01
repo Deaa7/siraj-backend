@@ -14,5 +14,5 @@ urlpatterns = [
     path('password-reset-confirm/', views.password_reset_confirm, name='password-reset-confirm'),
     path('verify-account/', views.verify_account.as_view(), name='verify-account'),
     path('delete-account/', views.delete_account, name='delete-account'),
-
+    path('check-reset-password-otp/' , views.check_reset_password_otp , name = "check-reset-password-otp")
 ]

@@ -58,7 +58,7 @@ class resend_otp_view(APIView):
                 status=status.HTTP_403_FORBIDDEN
             )
             
-        if user and user.is_email_confirmed:
+        if user and user.is_account_confirmed:
          
          return Response({
             "error": "البريد الإلكتروني تم تأكيده بالفعل لذلك لا يمكن إعادة تعيين رمز التحقق"
@@ -85,41 +85,27 @@ class resend_otp_view(APIView):
                 time_display = f"{remaining_seconds} ثانية"
             
             return Response({
+                "errors": {
                 "message": "يوجد رمز تحقق صالح مسبقاً",
                 "email": email,
                 "purpose": purpose,
                 "otp_expires_in": time_display,
                 "otp_expires_in_seconds": total_seconds,
-                "warning": "يرجى استخدام الرمز الحالي أو انتظار انتهاء صلاحيته قبل طلب رمز جديد"
-            }, status=status.HTTP_200_OK)
+                "warning": "تم إرسال رمز مسبق , الرجاء التحقق من البريد الإلكتروني"
+            }}, status=status.HTTP_400_BAD_REQUEST)
+        
         
         # generate otp code
-        otp_code = UserOTP.generate_otp()
-        expire_at = timezone.now() + timedelta(minutes=15)
-        
-        existing_otp.otp_code = otp_code
-        existing_otp.expire_at = expire_at
-        existing_otp.save()
-        
+        otp = UserOTP.objects.create(user=user, purpose=purpose, expire_at=timezone.now() + timedelta(minutes=15), otp_code=UserOTP.generate_otp())
         # Create and send new OTP
-        otp_result = send_otp_email.delay(otp_code = otp_code, first_name = user.first_name, email = user.email, purpose=purpose)
+        send_otp_email.delay(otp_code = otp.otp_code, first_name = user.first_name, email = user.email, purpose=purpose)
         
-        if otp_result.status == 'SUCCESS':
-            
-            purpose_message = "تأكيد البريد الإلكتروني" if purpose == "email_verification" else "إعادة تعيين كلمة المرور"
-            
-            return Response({
-                "message": f"تم إرسال رمز تحقق جديد لـ {purpose_message}",
-                "email": email,
-                "purpose": purpose,
-                "otp_expires_in": "15 دقيقة"
-            }, status=status.HTTP_200_OK)
-       
-        else:
-       
-            return Response({
-                "error": "فشل في إرسال رمز التحقق. يرجى المحاولة مرة أخرى"
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({
+            "message": "تم إرسال رمز تحقق جديد",
+            "email": email,
+            "purpose": purpose,
+            "otp_expires_in": "15 دقيقة"
+        }, status=status.HTTP_200_OK)
             
     except User.DoesNotExist:
    

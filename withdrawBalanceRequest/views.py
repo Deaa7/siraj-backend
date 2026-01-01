@@ -29,12 +29,12 @@ class make_withdraw_balance_request(APIView):
 
     if user is None:
         return Response(
-            {"error": "المستخدم غير موجود"}, status=status.HTTP_404_NOT_FOUND
+            {"message": "المستخدم غير موجود"}, status=status.HTTP_404_NOT_FOUND
         )
         
     if user.account_type == "student" :
         return Response(
-            {"error": "لا يحق لك تقديم طلب سحب رصيد"}, status=status.HTTP_404_NOT_FOUND
+            {"message": "لا يحق لك تقديم طلب سحب رصيد"}, status=status.HTTP_404_NOT_FOUND
         )
   
     serializer = MakeWithdrawBalanceRequestParametersSerializer(data=request.data)
@@ -43,8 +43,13 @@ class make_withdraw_balance_request(APIView):
 
         amount = serializer.validated_data.get("amount")
         payment_way = serializer.validated_data.get("payment_way")
-        shamcash_code = serializer.validated_data.get("shamcash_code")
-
+        meta_data = serializer.validated_data.get("meta_data")
+        # check if the user has a pending withdraw balance request , if so then reject the current request : 
+        pending_withdraw_balance_request = WithdrawBalanceRequest.objects.filter(user_id=user, confirmed=False).first()
+        if pending_withdraw_balance_request:
+            return Response(
+                {"message": "لديك طلب سابق قيد المعالجة"}, status=status.HTTP_400_BAD_REQUEST
+            )
         WithdrawBalanceRequest.objects.create(
             user_id=user,
             wanted_amount=amount,
@@ -54,7 +59,7 @@ class make_withdraw_balance_request(APIView):
             phone=user.phone,
             city=user.city,
             original_balance=user.balance,
-            shamcash_code=shamcash_code,
+            meta_data=meta_data,
         )
         
         Transactions.objects.create(
@@ -75,6 +80,6 @@ class make_withdraw_balance_request(APIView):
         )
     else:
         return Response(
-            {"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
+            {"message": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
         )
 

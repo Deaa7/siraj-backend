@@ -77,9 +77,7 @@ def change_number_of_comments(request, exam_public_id):
     
 @permission_classes([IsAuthenticated])
 @api_view(["PATCH"])
-def change_exam_metrics(
-    request, exam_public_id
-):  # change average result , number of apps
+def change_exam_metrics(request, exam_public_id):  # change average result , number of apps
     try:
         result = request.data.get("result")
         result = float(result)
@@ -643,7 +641,7 @@ def get_exam_preview_list(request):
         user = request.user 
         publisher = get_object_or_404(User, id=user.id);
         exams = Exam.objects.select_related("publisher_id").filter(
-            publisher_id=publisher.id , price__gt = 0
+            publisher_id=publisher.id  
         )
         serializer = ExamPreviewListSerializer(exams, many=True)
         return Response({"exams": serializer.data}, status=status.HTTP_200_OK)

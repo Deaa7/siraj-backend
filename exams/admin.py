@@ -66,7 +66,7 @@ class ExamAdmin(admin.ModelAdmin):
             'fields': ('publisher_id'  ,)
         }),
         ('المعلومات الأساسية', {
-            'fields': ( 'name' , 'Class', 'subject_name', 'price')
+            'fields': ( 'name' , 'Class', 'subject_name', 'price','active')
         }),
         ('الإحصائيات', {
             'fields': ('number_of_apps', 'number_of_purchases', 'number_of_questions', 'number_of_comments', 'result_avg', 'level', 'profit_amount'),

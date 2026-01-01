@@ -40,7 +40,9 @@ urlpatterns = [
     #courses
     path('api/courses/', include('courses.urls')),
     path('api/course-tracking/' , include('courseStatusTracking.urls')),
-   
+    path('api/videos/' , include('videos.urls')),
+    path('api/temp-uploads/', include('tempUploads.urls')),
+    path('api/lessons/', include('lessons.urls')),
     #social
     path('api/posts/', include('posts.urls')),
     path('api/comments/', include('comments.urls')),
@@ -70,7 +72,6 @@ urlpatterns = [
     
     #units
     path('api/units/', include('units.urls')),
-    
     #telegram
     # path('api/telegram/', include('telegramBot.urls')),
 

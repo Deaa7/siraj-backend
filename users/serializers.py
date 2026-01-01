@@ -74,8 +74,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
               raise serializers.ValidationError("رقم الهاتف مطلوب")
         try:
             return SecurityValidator.validate_input(
-                value, "الهاتف", check_sql_injection=True, check_xss=False
-            )
+               value, "الهاتف"             )
         except ValidationError as e:
             raise serializers.ValidationError(str(e))
     
@@ -144,7 +143,7 @@ class TeacherRegistrationSerializer(serializers.ModelSerializer):
     def validate_username(self, value):
         """Validate username with global security protection"""
 
-        secure_value = CommonValidators.validate_username(value, "اسم المستخدم")
+        secure_value = CommonValidators.validate_text_field(value, "اسم المستخدم")
         
         if User.objects.filter(username=secure_value).exists():
             raise serializers.ValidationError(" اسم المستخدم مسجل مسبقاً")
@@ -153,7 +152,7 @@ class TeacherRegistrationSerializer(serializers.ModelSerializer):
 
     def validate_email(self, value):
         """Validate phone with global security protection"""
-        secure_value = CommonValidators.validate_email_field(value, "البريد الإلكتروني")
+        secure_value = CommonValidators.validate_text_field(value, "البريد الإلكتروني")
         
         if User.objects.filter(email=secure_value).exists():
             raise serializers.ValidationError("البريد الإلكتروني مسجل مسبقاً")
@@ -267,7 +266,7 @@ class StudentRegistrationSerializer(serializers.ModelSerializer):
 
     def validate_username(self, value):
         """Validate username with global security protection"""
-        secure_value = CommonValidators.validate_username(value, "اسم المستخدم")
+        secure_value = CommonValidators.validate_text_field(value, "اسم المستخدم")
         if User.objects.filter(username=secure_value).exists():
             raise serializers.ValidationError(" اسم المستخدم مسجل مسبقاً")
 
@@ -275,7 +274,7 @@ class StudentRegistrationSerializer(serializers.ModelSerializer):
 
     def validate_email(self, value):
         """Validate email with global security protection"""
-        secure_value = CommonValidators.validate_email_field(value, "البريد الإلكتروني")
+        secure_value = CommonValidators.validate_text_field(value, "البريد الإلكتروني")
 
         if User.objects.filter(email=secure_value).exists():
             raise serializers.ValidationError("البريد الإلكتروني مسجل مسبقاً")
@@ -364,31 +363,31 @@ class TeamRegistrationSerializer(serializers.ModelSerializer):
         if User.objects.filter(username=value).exists():
             raise serializers.ValidationError(" اسم المستخدم مسجل مسبقاً")
 
-        return CommonValidators.validate_username(value, "اسم المستخدم")
+        return CommonValidators.validate_text_field(value, "اسم المستخدم")
 
     def validate_team_name(self, value):
         """Validate username with global security protection"""
         if User.objects.filter(team_name=value).exists():
             raise serializers.ValidationError(" اسم الفريق مسجل مسبقاً")
-        return CommonValidators.validate_team_name(value, "اسم الفريق")
+        return CommonValidators.validate_text_field(value, "اسم الفريق")
     
     def validate_email(self, value):
         """Validate email with global security protection"""
-        secure_value = CommonValidators.validate_email_field(value, "البريد الإلكتروني")
+        secure_value = CommonValidators.validate_text_field(value, "البريد الإلكتروني")
         if User.objects.filter(email=secure_value).exists():
             raise serializers.ValidationError("البريد الإلكتروني مسجل مسبقاً")
         return secure_value
     
     def validate_phone(self, value):
         """Validate phone with global security protection"""
-        secure_value = CommonValidators.validate_phone(value, "الهاتف")
+        secure_value = CommonValidators.validate_text_field(value, "الهاتف")
         if User.objects.filter(phone=secure_value).exists():
             raise serializers.ValidationError("رقم الهاتف مسجل مسبقاً")
         return secure_value
 
     def validate_password(self, value):
         """Validate password with global security protection"""
-        return CommonValidators.validate_password(value, "كلمة المرور")
+        return CommonValidators.validate_text_field(value, "كلمة المرور")
 
     def validate(self, data):
         """Cross-field validation"""
@@ -437,11 +436,11 @@ class LoginSerializer(serializers.Serializer):
         if value.startswith("deleted_"):
             raise serializers.ValidationError("اسم المستخدم غير مسجل في النظام")
         """Validate username with global security protection"""
-        return SecurityValidator.validate_username_field(value, "اسم المستخدم")
+        return SecurityValidator.validate_input(value, "اسم المستخدم")
 
     def validate_password(self, value):
         """Validate password with global security protection"""
-        return SecurityValidator.validate_password_field(value, "كلمة المرور")
+        return SecurityValidator.validate_input(value, "كلمة المرور")
 
 
 class AdminLoginSerializer(serializers.Serializer):
@@ -452,11 +451,11 @@ class AdminLoginSerializer(serializers.Serializer):
 
     def validate_username(self, value):
         """Validate username with global security protection"""
-        return SecurityValidator.validate_username_field(value, "اسم المستخدم")
+        return SecurityValidator.validate_input(value, "اسم المستخدم")
 
     def validate_password(self, value):
         """Validate password with global security protection"""
-        return SecurityValidator.validate_password_field(value, "كلمة المرور")
+        return SecurityValidator.validate_input(value, "كلمة المرور")
 
 
 class RefreshTokenSerializer(serializers.Serializer):
@@ -467,7 +466,7 @@ class RefreshTokenSerializer(serializers.Serializer):
     def validate_refresh(self, value):
         """Validate refresh token with global security protection"""
         return SecurityValidator.validate_input(
-            value, "رمز التحديث", check_sql_injection=True, check_xss=False
+            "رمز التحديث", value
         )
 
 
@@ -478,7 +477,7 @@ class ResetPasswordSerializer(serializers.Serializer):
 
     def validate_email(self, value):
         """Validate email with global security protection"""
-        validated_email = CommonValidators.validate_email_field(
+        validated_email = CommonValidators.validate_text_field(
             value, "البريد الإلكتروني"
         )
 
@@ -489,24 +488,11 @@ class ResetPasswordSerializer(serializers.Serializer):
         return validated_email
 
 
-class PasswordResetConfirmSerializer(serializers.Serializer):
-    """Serializer for password reset confirmation with OTP"""
 
-    email = serializers.EmailField(required=True)
+class CheckResetPasswordOTPSerializer(serializers.Serializer):
+    """Serializer for checking reset password OTP"""
+
     otp_code = serializers.CharField(max_length=4, required=True)
-    new_password = serializers.CharField(max_length=128, required=True, write_only=True)
-
-    def validate_email(self, value):
-        """Validate email with global security protection"""
-        validated_email = CommonValidators.validate_email_field(
-            value, "البريد الإلكتروني"
-        )
-
-        # Check if email exists in database
-        if not User.objects.filter(email=validated_email).exists():
-            raise serializers.ValidationError("البريد الإلكتروني غير مسجل في النظام")
-
-        return validated_email
 
     def validate_otp_code(self, value):
         """Validate OTP code with global security protection"""
@@ -516,7 +502,7 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         # Security validation
         try:
             value = SecurityValidator.validate_input(
-                value, "رمز التحقق", check_sql_injection=True, check_xss=False
+                value, "رمز التحقق" 
             )
         except ValidationError as e:
             raise serializers.ValidationError(str(e))
@@ -527,15 +513,35 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
 
         return value
 
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    """Serializer for password reset confirmation with OTP"""
+
+    email = serializers.EmailField(required=True)
+    new_password = serializers.CharField(max_length=128, required=True, write_only=True)
+
+    def validate_email(self, value):
+        """Validate email with global security protection"""
+        validated_email = CommonValidators.validate_text_field(
+            value, "البريد الإلكتروني"
+        )
+
+        # Check if email exists in database
+        if not User.objects.filter(email=validated_email).exists():
+            raise serializers.ValidationError("البريد الإلكتروني غير مسجل في النظام")
+
+        return validated_email
+ 
     def validate_new_password(self, value):
         """Validate new password with global security protection"""
         return CommonValidators.validate_password(value, "كلمة المرور الجديدة")
 
-    def validate(self, data):
-        """Cross-field validation"""
-        new_password = data.get("new_password")
+    # def validate(self, data):
+    #     """Cross-field validation"""
+    #     new_password = data.get("new_password")
 
-        return data
+    #     return data
 
 
 class EmailVerificationSerializer(serializers.Serializer):
@@ -553,7 +559,7 @@ class EmailVerificationSerializer(serializers.Serializer):
 
     def validate_email(self, value):
         """Validate email with global security protection"""
-        validated_email = CommonValidators.validate_email_field(
+        validated_email = CommonValidators.validate_text_field(
             value, "البريد الإلكتروني"
         )
 
@@ -571,7 +577,7 @@ class EmailVerificationSerializer(serializers.Serializer):
         # Security validation
         try:
             value = SecurityValidator.validate_input(
-                value, "رمز التحقق", check_sql_injection=True, check_xss=False
+                value, "رمز التحقق"
             )
         except ValidationError as e:
             raise serializers.ValidationError(str(e))
@@ -597,7 +603,7 @@ class ResendOTPSerializer(serializers.Serializer):
 
     def validate_email(self, value):
         """Validate email with global security protection"""
-        validated_email = CommonValidators.validate_email_field(
+        validated_email = CommonValidators.validate_text_field(
             value, "البريد الإلكتروني"
         )
 
@@ -611,7 +617,7 @@ class ResendOTPSerializer(serializers.Serializer):
         """Validate purpose with global security protection"""
         try:
             value = SecurityValidator.validate_input(
-                value, "الغرض", check_sql_injection=True, check_xss=False
+                value, "الغرض"
             )
         except ValidationError as e:
             raise serializers.ValidationError(str(e))

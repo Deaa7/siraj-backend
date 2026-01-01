@@ -115,7 +115,7 @@ class ExamUpdateSerializer(serializers.ModelSerializer):
 
         try:
             return SecurityValidator.validate_input(
-                value, "اسم الامتحان", check_sql_injection=True, check_xss=False
+                value, "اسم الامتحان"
             )
         except ValidationError as e:
             raise serializers.ValidationError(str(e))
@@ -127,7 +127,7 @@ class ExamUpdateSerializer(serializers.ModelSerializer):
 
         try:
             return SecurityValidator.validate_input(
-                value, "المواد الدراسية", check_sql_injection=True, check_xss=False
+                value, "المواد الدراسية"
             )
         except ValidationError as e:
             raise serializers.ValidationError(str(e))

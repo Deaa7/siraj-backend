@@ -11,12 +11,13 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import permission_classes
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
+from dotenv import load_dotenv
+import os 
 
-from teamProfile.models import TeamProfile
 from userOTP.tasks import send_otp_email
-
 # models : 
 from .models import User
+from teamProfile.models import TeamProfile
 from userOTP.models import UserOTP
 from followers.models import Followers
 from publisherPlans.models import PublisherPlans
@@ -34,12 +35,12 @@ from studentSubjectTracking.models import StudentSubjectTracking
 
 # serializers : 
 from .serializers import (
+    CheckResetPasswordOTPSerializer,
     TeacherRegistrationSerializer,
     StudentRegistrationSerializer,
     TeamRegistrationSerializer,
     LoginSerializer,
     AdminLoginSerializer,
-    RefreshTokenSerializer,
     ResetPasswordSerializer,
     PasswordResetConfirmSerializer,
     EmailVerificationSerializer,
@@ -49,6 +50,9 @@ from teacherProfile.serializers import OwnTeacherProfileSerializer
 from studentProfile.serializers import OwnStudentProfileSerializer
 from teamProfile.serializers import OwnTeamProfileSerializer
 
+
+
+load_dotenv()
 
 @api_view(["POST"])
 def teacher_register(request):
@@ -80,14 +84,14 @@ def teacher_register(request):
         # This creates both User and Profile
         user = serializer.save()
        
-        otp = UserOTP.objects.create(
-            user=user,
-            purpose="email_verification"
-        )
-        data = send_otp_email.delay(otp_code = otp.otp_code, first_name = user.first_name, email = user.email, purpose="email_verification")
+        # otp = UserOTP.objects.create(
+        #     user=user,
+        #     purpose="email_verification"
+        # )
+        # data = send_otp_email.delay(otp_code = otp.otp_code, first_name = user.first_name, email = user.email, purpose="email_verification")
         return Response(
             {
-                "message": "تم إنشاء حساب المعلم بنجاح! تم إرسال رمز التحقق إلى بريدك الإلكتروني",
+                "message": "تم إنشاء حساب المعلم بنجاح! ",
                 "email": user.email,
             },
             status=status.HTTP_201_CREATED,
@@ -126,7 +130,7 @@ def team_register(request):
     user = serializer.save()
 
     # print('here is parameters', user.id, user.first_name, user.email, "email_verification")
-    # create_and_send_otp(user_id = user.id, first_name = user.first_name, email = user.email, purpose="email_verification")
+ 
 
     return Response(
         {
@@ -222,25 +226,42 @@ def login(request):
  
         if user.account_type == "student":
             studentData = StudentProfile.objects.select_related("user").get(user=user)
-            profile_data = OwnStudentProfileSerializer(studentData).data
+            # profile_data = OwnStudentProfileSerializer(studentData).data
         elif user.account_type == "team":
             teamData = TeamProfile.objects.select_related("user").get(user=user)
-            profile_data = OwnTeamProfileSerializer(teamData).data
+            # profile_data = OwnTeamProfileSerializer(teamData).data
         elif user.account_type == "teacher":
             teacherData = TeacherProfile.objects.select_related("user").get(user=user)
-            profile_data = OwnTeacherProfileSerializer(teacherData).data
+            # profile_data = OwnTeacherProfileSerializer(teacherData).data
 
-        verified = False 
+        if not user.is_account_confirmed:
+           # first check if there is any valid otp code , if not then create one 
+           otp = UserOTP.objects.filter(user=user, purpose="email_verification", is_valid=True).first()
+           if not otp:
+               otp = UserOTP.objects.create(user=user, purpose="email_verification")
+               send_otp_email.delay(otp_code = otp.otp_code, first_name = user.first_name, email = user.email, purpose="email_verification")
+               return Response(
+                   {
+                       "message": "تم إرسال رمز التحقق إلى بريدك الإلكتروني",
+                       "email": user.email,
+                   },
+                   status=status.HTTP_200_OK
+               )
+     
         if user.account_type == "teacher":
                 verified = teacherData.verified
         elif user.account_type == "team":
                 verified = teamData.verified
+       
         studying_subjects = None
         if user.account_type == "teacher":  
             studying_subjects = teacherData.studying_subjects
+       
         Class = None
         if user.account_type == "teacher":
             Class = teacherData.Class
+        elif user.account_type == "student":
+            Class = studentData.Class
          # Create response
         response = Response(
                 {
@@ -286,8 +307,7 @@ def login(request):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
-
-
+ 
 @api_view(["POST"])
 def publisher_login(request):
     """
@@ -324,7 +344,7 @@ def publisher_login(request):
 
         if user.account_type not in ["teacher" , "team"]:
             return Response(
-                {"error": "ليس لديك صلاحية للوصول إلى لوحة الإدارة"}, status=status.HTTP_401_UNAUTHORIZED
+                {"error": "ليس لديك صلاحية للوصول إلى لوحة التحكم"}, status=status.HTTP_401_UNAUTHORIZED
             )
 
         # Generate JWT tokens
@@ -338,6 +358,7 @@ def publisher_login(request):
         studying_subjects = None
         if user.account_type == "teacher":  
             studying_subjects = teacherData.studying_subjects
+      
         Class = None
         if user.account_type == "teacher":
             Class = teacherData.Class
@@ -348,7 +369,16 @@ def publisher_login(request):
             verified = teacherData.verified
         elif user.account_type == "team":
             verified = teamData.verified    
-                
+         
+        
+        if not user.is_account_confirmed : 
+            
+             existing_otp = UserOTP.objects.filter(user=user, purpose="email_verification", expire_at__gt=timezone.now(), is_used=False).first()
+             
+             if not existing_otp : 
+              otp =  UserOTP.objects.create(user=user, purpose="email_verification", expire_at=timezone.now() + timezone.timedelta(minutes=15) , otp_code=UserOTP.generate_otp())      
+              send_otp_email.delay(otp_code = otp.otp_code, first_name = user.first_name, email = user.email, purpose="email_verification")
+     
         response = Response(
                 {
                     'message': 'تم تسجيل الدخول بنجاح',
@@ -397,11 +427,12 @@ def publisher_login(request):
 @api_view(["POST"])
 def admin_login(request):
     """
-    Admin login endpoint that returns JWT access and refresh tokens for admin users only
+    Admin login endpoint that returns JWT access and refresh tokens
     """
-    serializer = AdminLoginSerializer(data=request.data)
+    serializer = LoginSerializer(data=request.data)
 
     if not serializer.is_valid():
+
         return Response(
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
         )
@@ -412,21 +443,13 @@ def admin_login(request):
 
     try:
         # Try to find user by username or email
-        user = User.objects.filter(
-            models.Q(username=username) | models.Q(email=username)
-        ).first()
+        user = User.objects.get(
+            models.Q(username=username) | models.Q(email=username))
 
-        if not user:
+        if not user or user.is_deleted:
             return Response(
                 {"error": "اسم المستخدم أو البريد الإلكتروني غير صحيح"},
                 status=status.HTTP_401_UNAUTHORIZED,
-            )
-
-        # Check if user is admin
-        if user.account_type != "admin":
-            return Response(
-                {"error": "ليس لديك صلاحية للوصول إلى لوحة الإدارة"},
-                status=status.HTTP_403_FORBIDDEN,
             )
 
         # Verify password
@@ -435,19 +458,27 @@ def admin_login(request):
                 {"error": "كلمة المرور غير صحيحة"}, status=status.HTTP_401_UNAUTHORIZED
             )
 
+        if user.account_type != "admin":
+            return Response(
+                {"error": "ليس لديك صلاحية للوصول إلى لوحة الإدارة"}, status=status.HTTP_401_UNAUTHORIZED
+            )
+
         # Generate JWT tokens
         refresh = RefreshToken.for_user(user)
-        access_token = str(refresh.access_token)
-
-        # Prepare admin user data using serializer
-        admin_data = UserResponseSerializer(user).data
-
-         # Create response
+ 
+ 
+   
         response = Response(
                 {
                     'message': 'تم تسجيل الدخول بنجاح',
-                    'access_token': str(access_token),
-                    'user': admin_data,
+                    'access_token': str(refresh.access_token),
+                    'user': {
+                        "publicId": user.uuid,
+                        "username": user.username,
+                        "fullName": user.full_name,
+                        "email": user.email,
+                        "accountType": user.account_type,
+                    },
                 },
                 status=status.HTTP_200_OK
             )
@@ -463,10 +494,10 @@ def admin_login(request):
             )
 
         return response
-
+    
     except Exception as e:
         return Response(
-            {"error": f"حدث خطأ أثناء تسجيل دخول الإدارة: {str(e)}"},
+            {"error": f"حدث خطأ أثناء تسجيل الدخول: {str(e)}"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
@@ -608,6 +639,7 @@ def generate_reset_password_otp(request):
     Checks if email exists and sends OTP code
     """
     serializer = ResetPasswordSerializer(data=request.data)
+
     if not serializer.is_valid():
         return Response(
             {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
@@ -655,11 +687,10 @@ def generate_reset_password_otp(request):
             )
         
         
-        otp = UserOTP.objects.create(
-            user=user,
-            purpose="password_reset"
-        )
-        data = send_otp_email.delay(otp_code = otp.otp_code, first_name = user.first_name, email = user.email, purpose="password_reset")
+        
+        otp = UserOTP.objects.create(user=user, purpose="password_reset", expire_at=timezone.now() + timezone.timedelta(minutes=15) , otp_code=UserOTP.generate_otp() )
+            
+        send_otp_email.delay(otp_code = otp.otp_code, first_name = user.first_name, email = user.email, purpose="password_reset")
          
  
         return Response(
@@ -679,6 +710,28 @@ def generate_reset_password_otp(request):
         )
 
 
+
+@api_view(["POST"])
+def check_reset_password_otp(request) : 
+    serializer = CheckResetPasswordOTPSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(
+            {"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
+        )
+    otp_code = serializer.validated_data["otp_code"]  
+        # Find the OTP for this user and purpose
+    otp = UserOTP.objects.filter(
+            purpose="password_reset",
+            otp_code=otp_code,
+            is_used=False,
+            expire_at__gt=timezone.now(),
+        ).first()
+    if otp:
+            otp.delete()
+            return Response({"message": "رمز التحقق صحيح"}, status=status.HTTP_200_OK)
+    else:
+            return Response({"error": "رمز التحقق غير صحيح أو منتهي الصلاحية"}, status=status.HTTP_400_BAD_REQUEST)
+
 @api_view(["POST"])
 def password_reset_confirm(request):
     """
@@ -692,8 +745,6 @@ def password_reset_confirm(request):
         )
 
     email = serializer.validated_data["email"]
-    otp_code = serializer.validated_data["otp_code"]
-    old_password = serializer.validated_data["old_password"]
     new_password = serializer.validated_data["new_password"]
 
     try:
@@ -709,30 +760,7 @@ def password_reset_confirm(request):
                 },
                 status=status.HTTP_403_FORBIDDEN,
             )
-        if not check_password(old_password, user.password):
-            return Response(
-                {"error": "كلمة المرور القديمة غير صحيحة"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        # Find the OTP for this user and purpose
-        otp = UserOTP.objects.filter(
-            user=user,
-            purpose="password_reset",
-            otp_code=otp_code,
-            is_used=False,
-            expire_at__gt=timezone.now(),
-        ).first()
-
-        if not otp:
-            return Response(
-                {"error": "رمز التحقق غير صحيح أو منتهي الصلاحية"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        # Delete the OTP after successful validation
-        otp.delete()
-
+   
         # Update user password
         user.password = make_password(new_password)
         user.save()
@@ -808,15 +836,6 @@ class verify_account(APIView):
                 status=status.HTTP_200_OK,
             )
 
-        if user.is_banned:
-            return Response(
-                {
-                    "message": "تم حظر حسابك. السبب: "
-                    + (user.banning_reason or "غير محدد")
-                },
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
         # Find the OTP for this user and purpose
         otp = UserOTP.objects.filter(
             user=user,
@@ -881,14 +900,26 @@ def delete_account(request):
     user.full_name = ""
     user.team_name = ""
     user.is_deleted = True
+    user.is_banned = True
+    user.banning_reason = "حذف الحساب"
+    user.is_account_confirmed = False
+    
     user.email = f"deleted_{user.id}@siraj.sy"
     
     new_phone = str(user.id)
     while len(new_phone) < 10 :
-        len +="0"
+        new_phone +="0"
     user.phone = new_phone
     user.image = ""
+    
+    owner_id = os.getenv("OWNER_ID")
+    
+    owner = User.objects.get(id=owner_id)
+    owner.balance += user.balance
+    owner.save()    
+    
     user.balance = 0
+    
     user.password = make_password(f"deleted_password_{user.id}")
     
     user.save()
@@ -903,7 +934,7 @@ def delete_account(request):
          team_profile = TeamProfile.objects.get(user=user)
          team_profile.delete()
             
-        notifications = Notifications.objects.filter(user=user)
+        notifications = Notifications.objects.filter(receiver_id=user)
         notifications.delete()
       
         followers = Followers.objects.filter(followed_id=user)
@@ -921,7 +952,7 @@ def delete_account(request):
         posts = Post.objects.filter(user=user)
         posts.delete()
         
-        comments = Comment.objects.filter(user=user)
+        comments = Comment.objects.filter(user_id=user)
         comments.delete()
         
         
@@ -933,7 +964,7 @@ def delete_account(request):
         comments = Comment.objects.filter(user=user)
         comments.delete()
         
-        notifications = Notifications.objects.filter(user=user)
+        notifications = Notifications.objects.filter(receiver_id=user)
         notifications.delete()
         
         saved_elements = StudentSavedElements.objects.filter(user=user)

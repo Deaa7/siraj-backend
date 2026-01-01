@@ -58,7 +58,6 @@ class DiscountCodeCreateSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, data):
-        discount_for = data.get("discount_for")
         content_public_id = data.get("content_public_id")
         
         if not content_public_id:

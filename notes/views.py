@@ -9,13 +9,13 @@ from django.shortcuts import get_object_or_404
  
 from notesAppendixes.models import NotesAppendixes
 from notesAppendixes.serializers import NotesAppendixesSerializer
-from services.backblaze_bucket_manager import delete_file_from_b2
 from utils.validators import CommonValidators
 
 from services.parameters_validator import validate_pagination_parameters
 
 from Constants import CLASSES_ARRAY , SUBJECT_NAMES_ARRAY , LEVELS_ARRAY 
-
+from django.conf import settings
+import boto3
 
 # serializers
 from .serializers import (
@@ -45,6 +45,7 @@ from notesAppendixes.tasks import  process_existing_pdf_task
 #services :
 from services.publisher_plan_check import check_publisher_plan, check_publishing_content_availability
 
+from botocore.config import Config
 
 @permission_classes([IsAuthenticated])
 @api_view(["PATCH"])
@@ -453,8 +454,27 @@ def delete_note(request, note_public_id):
             )
 
         
-        delete_file_from_b2(note.content)
-      
+ 
+             
+        s3_client = boto3.client(
+            's3',
+            endpoint_url=settings.AWS_PRIVATE_ENDPOINT_URL,  # Your Backblaze endpoint
+             region_name=settings.AWS_PRIVATE_REGION_NAME,
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,  # Your keyID
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,  # Your applicationKey
+            config=Config(signature_version='s3v4'),
+        )
+ 
+
+        s3_client.delete_objects(
+        Bucket=settings.AWS_PRIVATE_BUCKET_NAME,
+         Delete={
+            'Objects': [{'Key': note.content}],
+            'Quiet': True
+        }
+            )
+   
+         
         note.delete()
         publisher_record.number_of_notes -= 1
         publisher_record.save()        
@@ -505,7 +525,7 @@ def get_note_content(request, note_public_id):
 def get_note_preview_list(request):
     try:
         user = request.user
-        notes = Note.objects.select_related("publisher_id").filter(publisher_id=user.id , price__gt = 0 )
+        notes = Note.objects.select_related("publisher_id").filter(publisher_id=user.id )
         serializer = NotePreviewListSerializer(notes, many=True)
         return Response({"notes": serializer.data}, status=status.HTTP_200_OK)
     except Exception as e:

@@ -1,38 +1,47 @@
-<!-- templates/emails/email_verification.html -->
-{% extends "emails/base_email.html" %}
-{% load static %}
-
-{% block title %}تأكيد بريدك الإلكتروني - {{ site_name }}{% endblock %}
-
-{% block content %}
-<h2 style="color: #333; margin-top: 0;">مرحباً بك في {{ site_name }}! 👋</h2>
-
-<p>أهلاً وسهلاً {{ user_name }},</p>
-
-<p>شكراً لتسجيلك في تطبيقنا! لإكمال عملية التسجيل وتأكيد بريدك الإلكتروني، يرجى استخدام كلمة المرور لمرة واحدة (OTP) التالية:</p>
-
-<div class="otp-code">
-    {{ otp_code }}
+{% extends "emails/base_email.html" %} {% block title %}تأكيد حسابك - {{
+site_name }}{% endblock %} {% block content %}
+<div style="text-align: center; margin-bottom: 30px">
+  {% if logo_url %}
+  <img
+    src="{{ logo_url }}"
+    alt="{{ site_name }}"
+    style="max-width: 150px; height: auto" />
+  {% endif %}
 </div>
 
-<div class="expiry-note">
-    ⏰ ستنتهي صلاحية هذا الرمز خلال <strong>{{ otp_expiry }} دقيقة</strong>. 
-    يرجى استخدامه قبل انتهاء الصلاحية.
+<h2 class="highlight">تأكيد البريد الإلكتروني </h2>
+
+<p>أهلاً <span class="highlight">{{ user_name }}</span>،</p>
+
+<p>
+  شكراً لانضمامك إلى <span class="highlight">{{ site_name }}</span>! نحن متحمسون
+  لوجودك معنا. لإكمال عملية التسجيل وتفعيل حسابك، يرجى استخدام رمز التحقق
+  التالي:
+</p>
+
+<div class="otp-box">{{ otp_code }}</div>
+
+<div class="alert-note">
+  <p>
+     يرجى ملاحظة أن هذا الرمز سينتهي مفعوله خلال
+    <span class="highlight">{{ otp_expiry }} دقيقة</span>.
+  </p>
 </div>
 
-<p>أدخل هذا الرمز في صفحة التحقق لتفعيل حسابك والبدء في استخدام خدماتنا.</p>
-
-<p>إذا واجهتك أي مشكلة، يمكنك نسخ الرمز ولصقه مباشرة:</p>
-
-<p style="text-align: center;">
-    <code style="background: #f8f9fa; padding: 10px; border-radius: 4px; font-size: 16px; font-family: 'Courier New', monospace;">
-        {{ otp_code }}
-    </code>
+<p>
+  بمجرد إدخال الرمز، ستتمكن من الوصول الكامل إلى المنصة والبدء في رحلتك
+  التعليمية.
 </p>
 
 <div class="support-info">
-    <p>هل تحتاج مساعدة؟ تواصل مع فريق الدعم على <a href="mailto:{{ support_email }}">{{ support_email }}</a></p>
+  <p>
+    إذا لم تقم بإنشاء حساب في موقعنا، يمكنك تجاهل هذا البريد الإلكتروني بأمان.
+  </p>
+  <p style="margin-top: 10px">
+    هل واجهت أي مشكلة؟ فريقنا جاهز للمساعدة:
+    <a href="mailto:{{ support_email }}" class="support-link"
+      >{{ support_email }}</a
+    >
+  </p>
 </div>
-
-<p>مع أطيب التحيات,<br>فريق {{ site_name }}</p>
 {% endblock %}

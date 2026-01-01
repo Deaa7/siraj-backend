@@ -3,9 +3,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import permission_classes, api_view
 from rest_framework.response import Response
 from rest_framework import status
-
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
+from Constants import CLASSES_ARRAY, SUBJECT_NAMES_ARRAY, LEVELS_ARRAY
 
 
 #tasks
@@ -19,10 +19,11 @@ from teacherProfile.models import TeacherProfile
 from teamProfile.models import TeamProfile
 from studentPremiumContent.models import StudentPremiumContent
 from courseStatusTracking.models import CourseStatusTracking
-
+from tempUploads.models import TempUpload
 
 #serializers
-from lessons.serializers import GetLessonSerializer
+from videos.serializers import CreateVideoSerializer
+from lessons.serializers import GetLessonSerializer , LessonSerializer  ,GetLessonDetailsForEditSerializer
 from .serializers import (
     CourseCreateSerializer,
     CourseDetailSerializer,
@@ -39,11 +40,9 @@ from services.publisher_plan_check import (
     check_publisher_plan,
     check_publishing_content_availability,
 )
-
-
 from services.parameters_validator import validate_pagination_parameters
 from utils.validators import CommonValidators
-from Constants import CLASSES_ARRAY, SUBJECT_NAMES_ARRAY, LEVELS_ARRAY
+
 
 @permission_classes([IsAuthenticated])
 @api_view(["PATCH"])
@@ -97,23 +96,31 @@ def change_number_of_comments(request, course_public_id):
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-
-# @permission_classes([IsAuthenticated])
-# @api_view(["PATCH"])
-# def change_number_of_likes(request, course_id):
-#     try:
-#         number = request.data.get("number", 1)
-#         course = Course.objects.get(id=course_id)
-#         course.number_of_likes += number
-#         course.save()
-#         return Response(status=status.HTTP_200_OK)
-#     except Exception as e:
-#         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-
+ 
 @permission_classes([IsAuthenticated])
 @api_view(["POST"])
 def create_course(request):
+  f"""
+    data to be sent : 
+    name   
+    description : string
+    Class : string
+    subject_name : string
+    level : string
+    price : number
+    course_image : string ,
+    what_you_will_learn : string ,
+    lessons : [
+        ``
+        lesson_type : string (exam | note | video)
+        content_public_id : string
+        explanation : string | null
+        name : string | null
+        
+        ``
+    ]
+    
+    """
     # publisher
   try:
     user = get_object_or_404(User, id=request.user.id)
@@ -127,13 +134,42 @@ def create_course(request):
             {"error": "لقد تجاوزت الحد المسموح به لنشر الدورات"},
             status=status.HTTP_400_BAD_REQUEST,
         )
-
+    
+    request.data['publisher_id'] = publisher_id
     serializer = CourseCreateSerializer(data=request.data)
+  
     if serializer.is_valid():
-        course = serializer.save()
         
-
-        publishing_course_notification.delay(course.id, user)
+        course= serializer.save()
+        lessons_data = request.data.get('lessons',[])
+        for lesson_data in lessons_data:
+                    lesson_data_copy = lesson_data.copy()
+                    lesson_data_copy['course_id'] = course.id
+                    video = None
+                    
+                    if  lesson_data_copy['lesson_type'] == 'video': 
+                         lesson_data_copy['publisher_id'] = publisher_id
+                         lesson_data_copy['url'] = lesson_data_copy['content_public_id']
+                         videoData =  CreateVideoSerializer(data=lesson_data_copy)
+                         
+                         if videoData.is_valid():
+                          video =videoData.save()
+                          temp = TempUpload.objects.filter(name =lesson_data_copy['content_public_id']).first()
+                          if temp:
+                            temp.delete()
+                          lesson_data_copy['content_public_id'] = video.public_id
+                         
+                         else:
+                            return Response(videoData.errors, status=status.HTTP_400_BAD_REQUEST)
+                                                            
+                    lesson_serializer = LessonSerializer(data=lesson_data_copy)
+                    if lesson_serializer.is_valid():
+                        lesson_serializer.save()
+                    else:
+                        return Response(lesson_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                        
+                               
+        publishing_course_notification.delay(course.id, user.id)
         
         return Response(status=status.HTTP_201_CREATED)
     else :
@@ -148,7 +184,7 @@ def update_course(request, course_public_id):
 
     try:
         
-        publisher_id = request.user.id
+        publisher_id = request.user
         course = get_object_or_404(Course, public_id=course_public_id)
 
         if course.publisher_id != publisher_id:
@@ -229,6 +265,18 @@ def get_course_details (request, course_public_id):
 
 @permission_classes([IsAuthenticated])
 @api_view(["GET"])
+def get_course_details_for_edit(request, course_public_id):
+    try:
+        course = get_object_or_404(Course, public_id=course_public_id)
+        serializer = CourseDetailSerializer(course)
+        lessons = Lessons.objects.filter(course_id=course.id).order_by("created_at")
+        lessons_serializer = GetLessonDetailsForEditSerializer(lessons, many=True)
+        return Response({"course": serializer.data, "lessons": lessons_serializer.data}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    
+@permission_classes([IsAuthenticated])
+@api_view(["GET"])
 def get_course_cards(request):
 
    try:
@@ -276,7 +324,7 @@ def get_course_cards(request):
                 status=status.HTTP_400_BAD_REQUEST,
             )
             
-        courses = Course.objects.select_related("publisher_id").filter(active=True)
+        courses = Course.objects.select_related("publisher_id").filter(active=True).order_by("-created_at")
 
         if publisher_name:
             courses = courses.filter(publisher__full_name_icontains=publisher_name)
@@ -397,7 +445,7 @@ def get_courses_list_for_dashboard(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    courses = Course.objects.filter(publisher_id=publisher_id)
+    courses = Course.objects.filter(publisher_id=publisher_id).order_by("-created_at")
 
     if courses.count() <= 0:
         return Response(
@@ -435,50 +483,11 @@ def get_courses_list_for_dashboard(request):
         status=status.HTTP_200_OK,
     )
 
-
-@permission_classes([IsAuthenticated])
-@api_view(["DELETE"])
-def delete_course(request, course_public_id):
-
-   try:
-    publisher_id = request.user.id
-    publisher = get_object_or_404(User, id=publisher_id)
-    publisher_type = publisher.account_type  # teacher, team
-    publisher_record = None
-
-    if publisher_type == "teacher":
-        publisher_record = get_object_or_404(TeacherProfile, user=publisher)
-    elif publisher_type == "team":
-        publisher_record = get_object_or_404(TeamProfile, user=publisher)
-        
-    # check if a student has purchased the course , in this case we can't delete the course
-    course = get_object_or_404(Course, public_id=course_public_id)
-   
-    student_premium_content = StudentPremiumContent.objects.filter(
-        course_id=course.id, date_of_expiration__gte=timezone.now()
-    )
-
-    if student_premium_content.exists():
-        return Response(
-            {"error": " عذراً لا يمكنك حذف هذه الدورة لأنه تم شراؤها من قبل طلاب"},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    course.delete()
-    publisher_record.number_of_courses -= 1
-    publisher_record.save()
-
-    return Response({"message": "تم حذف الدورة بنجاح"}, status=status.HTTP_200_OK)
-   except Exception as e:
-        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-
 @permission_classes([IsAuthenticated])
 @api_view(["GET"])
 def get_course_details_for_dashboard(request, course_public_id):
 
    try:
-   
     publisher_id = request.user
     course =Course.objects.select_related("publisher_id").get(public_id=course_public_id)
 
@@ -515,15 +524,50 @@ def get_course_and_lessons(request, course_public_id):
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-
-
 @permission_classes([IsAuthenticated])
 @api_view(["GET"])
 def get_course_preview_list(request):
     try:
         user = request.user
-        courses = Course.objects.select_related("publisher_id").filter(publisher_id=user.id , price__gt = 0)
+        courses = Course.objects.select_related("publisher_id").filter(publisher_id=user.id).order_by("-created_at")
         serializer = CoursePreviewListSerializer(courses, many=True)
         return Response({"courses": serializer.data}, status=status.HTTP_200_OK)
     except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@permission_classes([IsAuthenticated])
+@api_view(["DELETE"])
+def delete_course(request, course_public_id):
+
+   try:
+    publisher_id = request.user.id
+    publisher = get_object_or_404(User, id=publisher_id)
+    publisher_type = publisher.account_type  # teacher, team
+    publisher_record = None
+
+    if publisher_type == "teacher":
+        publisher_record = get_object_or_404(TeacherProfile, user=publisher)
+    elif publisher_type == "team":
+        publisher_record = get_object_or_404(TeamProfile, user=publisher)
+        
+    # check if a student has purchased the course , in this case we can't delete the course
+    course = get_object_or_404(Course, public_id=course_public_id)
+   
+    student_premium_content = StudentPremiumContent.objects.filter(
+        course_id=course.id, date_of_expiration__gte=timezone.now()
+    )
+
+    if student_premium_content.exists():
+        return Response(
+            {"error": " عذراً لا يمكنك حذف هذه الدورة لأنه تم شراؤها من قبل طلاب"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    course.delete()
+    publisher_record.number_of_courses -= 1
+    publisher_record.save()
+
+    return Response({"message": "تم حذف الدورة بنجاح"}, status=status.HTTP_200_OK)
+   except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

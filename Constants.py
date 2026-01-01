@@ -134,4 +134,4 @@ IMAGE_ALLOWED_FORMATS = [
 
 IMAGE_ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.svg', '.tiff', '.jpg']
 
-PAYMENT_WAYS_ARRAY = ["shamcash"]
+PAYMENT_WAYS_ARRAY = ["shamcash", "syriatel", "fauad", "haram"]

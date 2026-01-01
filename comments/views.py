@@ -207,37 +207,4 @@ def get_content_comments(request, content_public_id):
     
     return Response({"comments": serializer.data, "total_number": total_number}, status=status.HTTP_200_OK)
 
-
-@permission_classes([IsAuthenticated])
-@api_view(["GET"])
-def get_content_comments_number(request, content_public_id):
-    """
-    Retrieve number of comments for a given content_type and content_public_id.
-    """
-    content_type = request.query_params.get("content_type")
-    comment_number = 0
-    if content_type not in ["exam", "note", "course", "post", "comment"]:
-        return Response(
-            {"error": "نوع المحتوى غير صحيح"},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-    if content_type == "exam":
-      contentObj = get_object_or_404(Exam, public_id = content_public_id)
-      comment_number = Comment.objects.filter(exam_id = contentObj).count()
-    elif content_type == "note":
-      contentObj = get_object_or_404(Note, public_id = content_public_id)
-      comment_number = Comment.objects.filter(note_id = contentObj).count()
-    elif content_type == "course":
-      contentObj = get_object_or_404(Course, public_id = content_public_id)
-      comment_number = Comment.objects.filter(course_id = contentObj).count()
-    elif content_type == "post":
-      contentObj = get_object_or_404(Post, public_id = content_public_id)
-      comment_number = Comment.objects.filter(post_id = contentObj).count()
-    # elif content_type == "comment":
-    #   contentObj = get_object_or_404(Comment, public_id = content_public_id)
-    else:
-      return Response(
-        {"error": "نوع المحتوى غير معروف"},
-        status=status.HTTP_400_BAD_REQUEST,
-      )
-    return Response({"number_of_comments": comment_number}, status=status.HTTP_200_OK)
+ 

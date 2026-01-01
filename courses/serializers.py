@@ -1,3 +1,4 @@
+import json
 from rest_framework import serializers
 from .models import Course
 from utils.validators import CommonValidators
@@ -18,6 +19,7 @@ class CourseCreateSerializer(serializers.ModelSerializer):
             "number_of_lessons",
             "course_image",
             "estimated_time",
+            "level",
         ]
         
         
@@ -45,29 +47,25 @@ class CourseCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("الصف غير موجود")
  
         return value
-
-
-    def validate_description(self, value):
-        """Validate comment text with security protection for Arabic, English, and numbers"""
-
-        if not value:
-            raise serializers.ValidationError("الوصف مطلوب")
-        return CommonValidators.validate_text_field(value, "الوصف", max_length=1000)
-
+ 
     def validate_what_you_will_learn(self, value):
         """Validate comment text with security protection for Arabic, English, and numbers"""
         if not value:
             raise serializers.ValidationError(
                 "ما الذي سيتعلمه الطلاب من هذا الدرس مطلوب"
             )
-        return CommonValidators.validate_text_field(
-            value, "ما الذي سيتعلمه الطلاب من هذا الدرس", max_length=2000
+        val = json.loads(value)
+        if not val:
+            raise serializers.ValidationError("ما الذي سيتعلمه الطلاب من هذا الدرس مطلوب")
+        for item in val:
+            if not item:
+                raise serializers.ValidationError("ما الذي سيتعلمه الطلاب من هذا الدرس مطلوب")
+            CommonValidators.validate_text_field(
+            item, "ما الذي سيتعلمه الطلاب من هذا الدرس", max_length=2000
         )
+        return value
 
     def validate_price(self, value):
-    
-        if not value:
-            raise serializers.ValidationError("السعر مطلوب")
     
         return CommonValidators.validate_money_amount(value, "السعر")
     
@@ -97,15 +95,16 @@ class CourseDetailSerializer(serializers.ModelSerializer):
             "updated_at",
             "active",
             "course_image",
+            "level",
             "estimated_time",
         ]
 
     def get_publisher_name(self, obj):
         name = ""
-        if obj.publisher_id.account_category == "teacher":
+        if obj.publisher_id.account_type == "teacher":
             name = "الاستاذ " if obj.publisher_id.gender == "M" else "الآنسة " 
             name += obj.publisher_id.full_name
-        elif obj.publisher_id.account_category == "team":
+        elif obj.publisher_id.account_type == "team":
             name = "فريق " + obj.publisher_id.team_name
         return name
     
@@ -191,7 +190,6 @@ class CourseListSerializer(serializers.ModelSerializer):
         return name
     
 
-
 class CourseUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -206,7 +204,6 @@ class CourseUpdateSerializer(serializers.ModelSerializer):
             "what_you_will_learn",
             "course_image",
             "estimated_time",
-            "number_of_lessons",
         ]
 
     def validate_name(self, value):
@@ -215,22 +212,26 @@ class CourseUpdateSerializer(serializers.ModelSerializer):
         return CommonValidators.validate_text_field(value, "اسم الدرس", max_length=300)
 
     def validate_description(self, value):
-        if not value:
-            raise serializers.ValidationError("الوصف مطلوب")
-        return CommonValidators.validate_text_field(value, "الوصف", max_length=1000)
+ 
+        return CommonValidators.validate_text_field(value, "الوصف", max_length=1000 , allow_empty=True)
 
     def validate_price(self, value):
-        if not value:
-            raise serializers.ValidationError("السعر مطلوب")
-        return CommonValidators.validate_decimal_field(
-            value, "السعر", max_digits=10, decimal_places=2
-        )
+        return CommonValidators.validate_money_amount(value, "السعر")
 
     def validate_what_you_will_learn(self, value):
         if not value:
             raise serializers.ValidationError(
                 "ما الذي سيتعلمه الطلاب من هذا الدرس مطلوب"
             )
+        val = json.loads(value)
+        if not val:
+            raise serializers.ValidationError("ما الذي سيتعلمه الطلاب من هذا الدرس مطلوب")
+        for item in val:
+            if not item:
+                raise serializers.ValidationError("ما الذي سيتعلمه الطلاب من هذا الدرس مطلوب")
+            CommonValidators.validate_text_field(
+            item, "ما الذي سيتعلمه الطلاب من هذا الدرس", max_length=2000
+        )
         return CommonValidators.validate_text_field(
             value, "ما الذي سيتعلمه الطلاب من هذا الدرس", max_length=2000
         )
@@ -238,7 +239,7 @@ class CourseUpdateSerializer(serializers.ModelSerializer):
     def validate_estimated_time(self, value):
         if not value:
             raise serializers.ValidationError("الوقت المقدر مطلوب")
-        return CommonValidators.validate_integer_field(value, "الوقت المقدر")
+        return CommonValidators.validate_money_amount(value, "الوقت المقدر")
     
     
 class CourseListDashboardSerializer(serializers.ModelSerializer):

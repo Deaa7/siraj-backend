@@ -16,7 +16,6 @@ urlpatterns = [
     path('publisher-most-purchased-content-preview/', views.publisher_most_purchased_content_preview, name='publisher-most-purchased-content-preview'),
     path('publisher-most-profitable-content-preview/', views.publisher_most_profitable_content_preview, name='publisher-most-profitable-content-preview'),
 
-
     path('publisher-student-analysis-last-month-date/', views.publisher_student_analysis_last_month_date, name='publisher_student_analysis_last_month_date'),
     path('publisher-student-analysis-last-month-city/', views.publisher_student_analysis_last_month_city, name='publisher_student_analysis_last_month_city'),
     path('publisher-student-analysis-last-month-gender/', views.publisher_student_analysis_last_month_gender, name='publisher_student_analysis_last_month_gender'),

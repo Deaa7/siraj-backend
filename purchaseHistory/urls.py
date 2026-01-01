@@ -17,4 +17,5 @@ urlpatterns = [
         name="publisher_purchases_grouped_by_gender_last_month",
     ),
     path('purchase-history-list/', views.purchase_history_list, name='purchase_history_list'),
+ 
 ]
