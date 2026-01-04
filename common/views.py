@@ -1305,3 +1305,104 @@ class PublicPresignedURL(APIView):
                 {'error': f'Failed to generate presigned URL: {str(e)}'}, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+def _format_publisher_data(publisher, publisher_type):
+    """
+    Helper function to format publisher data for response.
+    """
+    # Format the name based on publisher type and gender
+    user = publisher.user
+    if publisher_type == "teacher":
+        if user.gender == "M":
+            formatted_name = f"الاستاذ {user.full_name}"
+        elif user.gender == "F":
+            formatted_name = f"الآنسة {user.full_name}"
+        else:
+            formatted_name = user.full_name
+    else:  # team
+        formatted_name = f"فريق {user.team_name}"
+    
+    # Build response data
+    response_data = {
+        "name": formatted_name,
+        "image" : publisher.user.image,
+        "publisher_type": publisher_type,
+        "public_id": str(publisher.user.uuid),
+        "city": publisher.user.city,
+        "number_of_exams": publisher.number_of_exams,
+        "number_of_notes": publisher.number_of_notes,
+        "number_of_courses": publisher.number_of_courses,
+        "number_of_followers": publisher.number_of_followers,
+        "experience_years": publisher.years_of_experience if publisher.years_of_experience else None,
+        "address": publisher.address if publisher.address else None,
+    }
+    
+    # Add teacher-specific fields
+    if publisher_type == "teacher":
+        response_data["subject_name"] = publisher.studying_subjects if publisher.studying_subjects else None
+        response_data["Class"] = publisher.Class if publisher.Class else None
+        response_data["university"] = publisher.university if publisher.university else None
+    else:  # team
+        response_data["subject_name"] = None
+        response_data["Class"] = None
+        response_data["university"] = None
+    
+    return response_data
+
+@permission_classes([IsAuthenticated])
+@api_view(["GET"])
+def most_popular_publishers(request):
+    """
+    Find the most popular 6 publishers (by followers) and return their statistics.
+    Publishers can be either teachers or teams.
+    """
+    try:
+        # Get popular teachers (get more than 6 to ensure we have enough after combining)
+        popular_teachers = TeacherProfile.objects.filter(
+            user__account_type="teacher",
+            user__is_banned=False,
+            user__is_deleted=False
+        ).select_related('user').order_by('-number_of_followers')[:6]
+        
+        # Get popular teams (get more than 6 to ensure we have enough after combining)
+        popular_teams = TeamProfile.objects.filter(
+            user__account_type="team",
+            user__is_banned=False,
+            user__is_deleted=False
+        ).select_related('user').order_by('-number_of_followers')[:6]
+        
+        # Combine all publishers with their type information
+        all_publishers = []
+        
+        for teacher in popular_teachers:
+            all_publishers.append((teacher, "teacher"))
+        
+        for team in popular_teams:
+            all_publishers.append((team, "team"))
+        
+        # Sort by number_of_followers (descending)
+        # all_publishers.sort(key=lambda x: x[0].number_of_followers )
+        all_publishers.sort(key=lambda x: x[0].number_of_followers, reverse=True)
+        # Take the top 6
+        top_publishers = all_publishers[:6]
+        
+        if not top_publishers:
+            return Response(
+                {"error": "لا يوجد ناشرون متاحون"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Format each publisher's data
+        response_data = []
+        for publisher, publisher_type in top_publishers:
+            formatted_data = _format_publisher_data(publisher, publisher_type)
+            response_data.append(formatted_data)
+        
+        return Response(response_data, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_400_BAD_REQUEST
+        )

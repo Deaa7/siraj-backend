@@ -841,3 +841,13 @@ def generate_mcqs_with_deepseek(text, num_questions):
         raise Exception(f"AI returned invalid JSON format: {str(e)}")
     except Exception as e:
         raise Exception(f"Failed to generate questions: {str(e)}")
+
+@permission_classes([IsAuthenticated])
+@api_view(["GET"])
+def get_trending_exams(request):
+    try:
+        exams = Exam.objects.filter(active=True, visibility='public').order_by('-number_of_apps')[:6]
+        serializer = ExamCardsSerializer(exams, many=True)
+        return Response({"exams": list(reversed(serializer.data))}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

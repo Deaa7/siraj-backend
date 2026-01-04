@@ -13,6 +13,8 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 from dotenv import load_dotenv
 import os 
+from Constants import CLASSES_ARRAY , SUBJECT_NAMES_ARRAY , CITIES_ARRAY
+from services.parameters_validator import validate_pagination_parameters
 
 from userOTP.tasks import send_otp_email
 # models : 
@@ -206,12 +208,12 @@ def login(request):
     try:
         # Try to find user by username or email
         user = User.objects.filter(
-            models.Q(username=username) | models.Q(email=username)
+            models.Q(username=username) | models.Q(email=username) | models.Q(phone=username)
         ).first()
 
         if not user or user.is_deleted:
             return Response(
-                {"error": "اسم المستخدم أو البريد الإلكتروني غير صحيح"},
+                {"error": "اسم المستخدم أو البريد الإلكتروني أو الهاتف غير صحيح"},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
@@ -248,6 +250,7 @@ def login(request):
                    status=status.HTTP_200_OK
                )
      
+        verified = False
         if user.account_type == "teacher":
                 verified = teacherData.verified
         elif user.account_type == "team":
@@ -267,6 +270,7 @@ def login(request):
                 {
                     'message': 'تم تسجيل الدخول بنجاح',
                     'access_token': str(refresh.access_token),
+                    'refresh_token': str(refresh),
                     'user': {
                         "publicId": user.uuid,
                         "firstName": user.first_name,
@@ -288,17 +292,6 @@ def login(request):
                 },
                 status=status.HTTP_200_OK
             )
-        
-        response.set_cookie(    
-                key='refresh_token',
-                value=str(refresh),
-                httponly=True,
-                secure=True,
-                samesite="None",  # 'Lax' allows cookies in cross-site requests
-                max_age=30 * 24 * 60 * 60,  # 30 days in seconds
-                path='/',  # Available for all paths
-            )
-
         return response
 
     except Exception as e:
@@ -710,7 +703,6 @@ def generate_reset_password_otp(request):
         )
 
 
-
 @api_view(["POST"])
 def check_reset_password_otp(request) : 
     serializer = CheckResetPasswordOTPSerializer(data=request.data)
@@ -781,8 +773,6 @@ def password_reset_confirm(request):
             {"error": f"حدث خطأ أثناء معالجة الطلب: {str(e)}"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
-
-
  
 class verify_account(APIView):
     
@@ -977,3 +967,181 @@ def delete_account(request):
         subject_tracking.delete()
 
     return Response({"message": "تم حذف حسابك بنجاح"}, status=status.HTTP_200_OK)
+
+
+@permission_classes([IsAuthenticated])
+@api_view(["GET"])
+def get_publisher_cards(request):
+    
+    user_type = request.query_params.get("user_type" , "teacher")
+    order_by = request.query_params.get("order_by" , "number_of_followers")
+    Class = request.query_params.get("Class" , "all")
+    subject_name = request.query_params.get("subject_name" , "all")
+    city = request.query_params.get("city" , "all")
+    
+    if user_type not in ["teacher", "team"]:
+        return Response({"error": "نوع الحساب غير معروف"}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Validate city (make it optional)
+    if city != "all" and city not in CITIES_ARRAY:
+        return Response({"error": "المدينة غير معروفة"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Validate Class (only for teachers, make it optional)
+    if user_type == "teacher" and Class != "all" and Class not in CLASSES_ARRAY:
+        return Response({"error": "الصف غير معروف"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Validate subject_name (only for teachers, make it optional)
+    if user_type == "teacher" and subject_name != "all" and subject_name not in SUBJECT_NAMES_ARRAY:
+        return Response({"error": "المادة غير معروفة"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    if order_by not in ["number_of_exams", "number_of_courses", "number_of_notes", "number_of_followers", "years_of_experience"]:
+        return Response({"error": "الترتيب غير معروف"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Validate pagination parameters
+    count, limit = validate_pagination_parameters(
+        request.query_params.get("count", 0),
+        request.query_params.get("limit", 7)
+    )
+    
+    try:
+        # Build base query filters
+        base_filters = {
+            "user__account_type": user_type,
+            "user__is_deleted": False,
+            "user__is_banned": False,
+        }
+        
+        # Add city filter if provided
+        if city and city != "all":
+            base_filters["user__city"] = city
+        
+        # Query based on user_type
+        if user_type == "teacher":
+            # Add teacher-specific filters
+            if Class and Class != "all":
+                base_filters["Class"] = Class
+            if subject_name and subject_name != "all":
+                base_filters["studying_subjects"] = subject_name
+            
+            # Query teachers
+            publishers = TeacherProfile.objects.filter(
+                **base_filters
+            ).select_related('user')
+            
+            # Apply ordering
+            order_by_field = f"-{order_by}"
+            publishers = publishers.order_by(order_by_field)
+            
+            # Get total count before pagination
+            total_number = publishers.count()
+            
+            # Apply pagination
+            begin = count * limit
+            end = (count + 1) * limit
+            
+            # Check if begin/end exceed total_number and adjust
+            if begin > total_number:
+                begin = total_number
+            if end > total_number:
+                end = total_number
+            
+            # Slice the queryset
+            publishers = publishers[begin:end]
+            
+            # Format response data using the same structure as most_popular_publishers
+            response_data = []
+            for publisher in publishers:
+                # Format the name based on publisher type and gender
+                user = publisher.user
+                if user.gender == "M":
+                    formatted_name = f"الاستاذ {user.full_name}"
+                elif user.gender == "F":
+                    formatted_name = f"الآنسة {user.full_name}"
+                else:
+                    formatted_name = user.full_name
+                
+                # Build response data
+                formatted_data = {
+                    "name": formatted_name,
+                    "image": publisher.user.image,
+                    "publisher_type": "teacher",
+                    "public_id": str(publisher.user.uuid),
+                    "city": publisher.user.city,
+                    "number_of_exams": publisher.number_of_exams,
+                    "number_of_notes": publisher.number_of_notes,
+                    "number_of_courses": publisher.number_of_courses,
+                    "number_of_followers": publisher.number_of_followers,
+                    "experience_years": publisher.years_of_experience if publisher.years_of_experience else None,
+                    "address": publisher.address if publisher.address else None,
+                    "subject_name": publisher.studying_subjects if publisher.studying_subjects else None,
+                    "Class": publisher.Class if publisher.Class else None,
+                    "university": publisher.university if publisher.university else None,
+                }
+                response_data.append(formatted_data)
+        
+        else:  # team
+            # Query teams (Class and subject_name don't apply to teams)
+            publishers = TeamProfile.objects.filter(
+                **base_filters
+            ).select_related('user')
+            
+            # Apply ordering
+            order_by_field = f"-{order_by}"
+            publishers = publishers.order_by(order_by_field)
+            
+            # Get total count before pagination
+            total_number = publishers.count()
+            
+            # Apply pagination
+            begin = count * limit
+            end = (count + 1) * limit
+            
+            # Check if begin/end exceed total_number and adjust
+            if begin > total_number:
+                begin = total_number
+            if end > total_number:
+                end = total_number
+            
+            # Slice the queryset
+            publishers = publishers[begin:end]
+            
+            # Format response data
+            response_data = []
+            for publisher in publishers:
+                # Format the name for team
+                formatted_name = f"فريق {publisher.user.team_name}"
+                
+                # Build response data
+                formatted_data = {
+                    "name": formatted_name,
+                    "image": publisher.user.image,
+                    "publisher_type": "team",
+                    "public_id": str(publisher.user.uuid),
+                    "city": publisher.user.city,
+                    "number_of_exams": publisher.number_of_exams,
+                    "number_of_notes": publisher.number_of_notes,
+                    "number_of_courses": publisher.number_of_courses,
+                    "number_of_followers": publisher.number_of_followers,
+                    "experience_years": publisher.years_of_experience if publisher.years_of_experience else None,
+                    "address": publisher.address if publisher.address else None,
+                    "subject_name": None,
+                    "Class": None,
+                    "university": None,
+                }
+                response_data.append(formatted_data)
+        
+        # Return response with pagination info
+        return Response({
+            "publishers": response_data,
+            "total_number": total_number
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+
+
+

@@ -22,4 +22,5 @@ urlpatterns = [
     path('get-exam-cards/', views.get_exam_cards, name='get_exam_cards'),
     path('get-exam-cards-by-publisher-public-id/<str:publisher_public_id>/', views.get_exam_cards_by_publisher_public_id, name='get_exam_cards_by_publisher_public_id'),
     path('get-exam-and-mcqs/<str:exam_public_id>/', views.get_exam_and_mcqs, name='get_exam_and_mcqs'),
+    path('get-trending-exams/', views.get_trending_exams, name='get_trending_exams'),
 ]

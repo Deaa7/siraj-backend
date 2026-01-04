@@ -45,13 +45,8 @@ class Note(PublicModel):
         default=0, blank=True, validators=[MinValueValidator(0)]
     )
     
-    
     file_size = models.IntegerField(
         default=0, blank=True, validators=[MinValueValidator(0)]
-    )
-    
-    file_unique_name = models.CharField(
-        max_length=500, default="", validators=[MinLengthValidator(2)]
     )
     
     active = models.BooleanField(default=True, blank=True)

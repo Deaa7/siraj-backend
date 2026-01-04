@@ -23,6 +23,7 @@ urlpatterns = [
     path('platform-statistics/', views.platform_statistics, name='platform-statistics'),
     path('publisher-statistics/', views.publisher_statistics, name='publisher-statistics'),
     path('check-publishing-availability/', views.check_publishing_availability, name='check-publishing-availability'),
+    path('most-popular-publishers/', views.most_popular_publishers, name='most-popular-publishers'),
    
      path('create-private-presigned-url/', views.PrivatePresignedURL.as_view(), name='create-private-presigned-url'),
      path('create-public-presigned-url/', views.PublicPresignedURL.as_view(), name='create-public-presigned-url'),

@@ -20,6 +20,7 @@ urlpatterns = [
     #student 
     path('get-note-details/<str:note_public_id>/', views.get_note_details, name='get_note_details'),
     path('get-note-cards/', views.get_note_cards, name='get_note_cards'),
+    path('get-trending-notes/', views.get_trending_notes, name='get_trending_notes'),
     path('get-note-cards-by-publisher-public-id/<str:publisher_public_id>/', views.get_note_cards_by_publisher_public_id, name='get_note_cards_by_publisher_public_id'),
     path('get-note-content/<str:note_public_id>/', views.get_note_content, name='get_note_content'),
 ]

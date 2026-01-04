@@ -33,6 +33,7 @@ ALLOWED_HOSTS = [
      "localhost",
     "127.0.0.1",
     "192.168.10.130",
+    "192.168.10.153",
     "siraj-frontend.vercel.app",
     ]   
 
@@ -49,6 +50,8 @@ CORS_ALLOWED_ORIGINS = [
     "https://siraj-frontend.vercel.app",
 
     "http://192.168.10.130:8000",  
+    "http://192.168.10.153:8000",  
+    "http://192.168.10.153:8081",  
     "http://192.168.10.130:8081",
     "http://localhost:8081",
       
@@ -84,6 +87,8 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:8081",
     "http://192.168.10.130:8081",
     "http://192.168.10.130:8000",
+        "http://192.168.10.153:8000",  
+    "http://192.168.10.153:8081", 
     "https://siraj-frontend.vercel.app",
 ]
 

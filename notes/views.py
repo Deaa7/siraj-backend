@@ -1,5 +1,6 @@
 
 
+from typing import Any
 from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
@@ -529,4 +530,15 @@ def get_note_preview_list(request):
         serializer = NotePreviewListSerializer(notes, many=True)
         return Response({"notes": serializer.data}, status=status.HTTP_200_OK)
     except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+@permission_classes([IsAuthenticated])
+@api_view(["GET"])
+def get_trending_notes(request):
+    try:
+        notes = Note.objects.filter(active=True, visibility='public').order_by('-number_of_downloads')[:6]
+        serializer = NoteCardsSerializer(notes, many=True)
+        return Response({"notes": list(reversed(serializer.data)) }, status=status.HTTP_200_OK)
+    except Exception as e:
+        print(e)
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

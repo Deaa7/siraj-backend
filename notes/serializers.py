@@ -22,7 +22,6 @@ class NoteCreateSerializer(serializers.ModelSerializer):
             "content",
             "number_of_pages",
             "file_size",
-            "file_unique_name",
         ]
         
 class NoteDetailsSerializer(serializers.ModelSerializer):
@@ -72,6 +71,8 @@ class NoteDataForEditSerializer(serializers.ModelSerializer):
             "url" ,
             "price",
             "content",
+            "number_of_pages",
+            "file_size",
         ]
         
     def get_presigned_url(self, obj):
@@ -155,7 +156,9 @@ class NoteUpdateSerializer(serializers.ModelSerializer):
             "visibility",
             "price",
             "description",
-            "content"
+            "content",
+            "number_of_pages",
+            "file_size",
         ]
         
        
@@ -242,7 +245,7 @@ class NoteContentSerializer(serializers.ModelSerializer):
             "public_id"
             "number_of_pages",
             "file_size",
-            "file_unique_name",
+          
             "content",
         ]
         
